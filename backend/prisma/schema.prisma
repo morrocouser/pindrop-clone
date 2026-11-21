@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  customer
+  business
+}
+
+enum BusinessStatus {
+  pending
+  active
+  inactive
+}
+
+model User {
+  id            Int        @id @default(autoincrement())
+  email         String     @unique @db.VarChar(255)
+  password_hash String     @db.VarChar(255)
+  first_name    String?    @db.VarChar(100)
+  last_name     String?    @db.VarChar(100)
+  role          Role       @default(customer)
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  last_login    DateTime?
+  businesses    Business[]
+  templates     Template[]
+
+  @@map("users")
+}
+
+model Template {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(255)
+  category      String   @db.VarChar(100)
+  industry      String   @db.VarChar(100)
+  description   String?
+  thumbnail_url String?  @db.VarChar(500)
+  price         Decimal  @default(0) @db.Decimal(10, 2)
+  features      Json?
+  languages     Json?
+  created_at    DateTime @default(now())
+  created_by    Int?
+  creator       User?    @relation(fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@index([created_by])
+  @@map("templates")
+}
+
+model Business {
+  id          Int            @id @default(autoincrement())
+  user_id     Int
+  name        String         @db.VarChar(255)
+  industry    String?        @db.VarChar(100)
+  address     String?        @db.VarChar(500)
+  phone       String?        @db.VarChar(50)
+  email       String?        @db.VarChar(255)
+  website_url String?        @db.VarChar(500)
+  status      BusinessStatus @default(pending)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  owner       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("businesses")
+}
