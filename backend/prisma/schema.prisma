@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // rhel-openssl-3.0.x : moteur utilisé par les fonctions Netlify (AWS Lambda)
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -46,6 +48,7 @@ model User {
   templates     Template[]
   sites         Site[]
   credit_log    CreditEntry[]
+  preview       DraftPreview?
 
   @@map("users")
 }
@@ -135,4 +138,17 @@ model CreditEntry {
 
   @@index([user_id])
   @@map("credit_entries")
+}
+
+/// Aperçu du brouillon en cours d'édition (un par utilisateur) : l'API est sans état, donc il vit en base
+model DraftPreview {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique
+  token      String   @unique @db.VarChar(64)
+  html       String
+  pack       Boolean  @default(false)
+  expires_at DateTime
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("draft_previews")
 }

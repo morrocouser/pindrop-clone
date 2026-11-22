@@ -1,0 +1,14 @@
+# Application Pindrop (React + Vite) : site statique.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+  [build.environment]
+    # URL publique de l'API (autre site Netlify : origine différente, par sécurité)
+    VITE_API_URL = "https://pindrop-clone-api.netlify.app/api"
+
+# Application monopage : toutes les routes renvoient index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

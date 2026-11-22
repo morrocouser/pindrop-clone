@@ -10,6 +10,9 @@ import { packRouter, payRouter, siteRouter } from './routes/publicRoutes';
 import sitesRoutes, { earningsRouter } from './routes/sitesRoutes';
 
 const app = express();
+// Derrière le CDN de Netlify : l'adresse du client est dans X-Forwarded-For (limitation de débit)
+app.set('trust proxy', 1);
+app.set('etag', false); // pas de réponses 304 : voir netlify/functions/api.cts
 
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigins, credentials: true }));

@@ -9,7 +9,19 @@ import { SiteContent } from './content';
  * backend/templates/<clé>/. Leur index.html contient des champs {{...}} remplis avec le contenu du site.
  * Les fichiers statiques sont servis par /t/<clé>/ ; le HTML n'est jamais servi tel quel.
  */
-export const PACKS_DIR = path.resolve(__dirname, '../../templates');
+/** Dossier des gabarits : selon l'hébergement (local, fonction Netlify), il n'est pas au même endroit. */
+function findPacksDir(): string {
+  const task = process.env.LAMBDA_TASK_ROOT;
+  const candidates = [
+    process.env.PACKS_DIR,
+    path.resolve(__dirname, '../../templates'),
+    path.resolve(process.cwd(), 'templates'),
+    task && path.join(task, 'templates'),
+    task && path.join(task, 'backend', 'templates')
+  ].filter((d): d is string => !!d);
+  return candidates.find((d) => fs.existsSync(d)) ?? candidates[1];
+}
+export const PACKS_DIR = findPacksDir();
 
 const htmlCache = new Map<string, string>();
 

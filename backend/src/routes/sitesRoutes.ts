@@ -139,14 +139,18 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Rendu à la volée du brouillon en cours d'édition (rien n'est enregistré)
-router.post('/preview', (req: Request, res: Response) => {
+router.post('/preview', async (req: Request, res: Response) => {
   const parsed = previewSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors });
   const style = STYLE_BY_KEY.get(parsed.data.template_key);
   if (!style) return res.status(400).json({ error: 'Unknown template' });
   const html = renderSite({ name: parsed.data.name, lang: parsed.data.lang, content: parsed.data.content, style, noindex: true });
-  const id = savePreview(req.user!.userId, html, !!style.pack);
-  return res.json({ url: `${config.publicBaseUrl}/s/_p/${id}` });
+  try {
+    const id = await savePreview(req.user!.userId, html, !!style.pack);
+    return res.json({ url: `${config.publicBaseUrl}/s/_p/${id}` });
+  } catch (error) {
+    return fail(res, 'save preview', error);
+  }
 });
 
 router.post('/', async (req: Request, res: Response) => {

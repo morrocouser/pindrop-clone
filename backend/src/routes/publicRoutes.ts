@@ -61,8 +61,8 @@ function infoPage(title: string, message: string): string {
 }
 
 // Aperçu d'un brouillon (voir previewStore) : URL non devinable, expire au bout de 10 minutes
-siteRouter.get('/_p/:id', (req: Request, res: Response) => {
-  const p = getPreview(req.params.id);
+siteRouter.get('/_p/:id', async (req: Request, res: Response) => {
+  const p = await getPreview(req.params.id).catch(() => null);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
