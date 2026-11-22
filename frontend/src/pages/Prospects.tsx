@@ -19,7 +19,7 @@ const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522];
 function pinIcon(selected: boolean): L.DivIcon {
   return L.divIcon({
     className: 'pin-icon',
-    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#0e2236' : '#ffc400'}" stroke="#0e2236" stroke-width="1.5"/><circle cx="16" cy="11" r="3.5" fill="${selected ? '#ffc400' : '#0e2236'}"/></svg>`,
+    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#0a2540' : '#2345bb'}" stroke="#fff" stroke-width="1.6"/><circle cx="16" cy="11" r="3.5" fill="#fff"/></svg>`,
     iconSize: [selected ? 38 : 30, selected ? 38 : 30],
     iconAnchor: [selected ? 19 : 15, selected ? 38 : 30]
   });
@@ -107,7 +107,7 @@ export default function Prospects() {
     setNotice('');
     setSelectedId(null);
     area.current?.remove();
-    area.current = L.circle(c, { radius, color: '#0e2236', weight: 1.5, dashArray: '6 6', fillColor: '#ffc400', fillOpacity: 0.07, interactive: false }).addTo(m);
+    area.current = L.circle(c, { radius, color: '#2345bb', weight: 1.5, dashArray: '2 7', fillColor: '#2345bb', fillOpacity: 0.06, interactive: false }).addTo(m);
     m.fitBounds(area.current.getBounds(), { padding: [24, 24] });
     try {
       const found = await api.prospects(c.lat, c.lng, radius);
@@ -134,7 +134,7 @@ export default function Prospects() {
   return (
     <div className="map-page">
       <section className="map-panel" aria-label="Recherche de prospects">
-        <h1>Trouver des commerces sans site</h1>
+<h1 className="map-title">Trouver des commerces sans site</h1>
         <form className="searchbar" onSubmit={onPlace} role="search">
           <Search size={18} aria-hidden />
           <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Ville, quartier ou adresse" aria-label="Lieu à chercher" />
@@ -167,7 +167,7 @@ export default function Prospects() {
           </p>
         )}
         {results?.length === 0 && <p className="muted">Aucun résultat dans ce rayon. Agrandissez-le ou déplacez la carte.</p>}
-        {results === null && !loading && !error && <p className="muted">Déplacez la carte sur un quartier, puis lancez la recherche. Chaque pin jaune est un commerce sans site web renseigné.</p>}
+        {results === null && !loading && !error && <p className="muted">Déplacez la carte sur un quartier, puis lancez la recherche. Chaque épingle bleue est un commerce sans site web renseigné.</p>}
 
         <ul className="plist">
           {results?.map((p) => (

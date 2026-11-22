@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-rou
 import { LayoutTemplate, LogOut, MapPin, PanelsTopLeft } from 'lucide-react';
 import { useAuth } from './auth';
 import { Brand } from './components/Brand';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import NewSite from './pages/NewSite';
 import Pay from './pages/Pay';
@@ -20,25 +21,25 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function Shell() {
+function Shell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const name = user?.firstName || user?.email || '';
   return (
     <div className="shell">
-      <aside className="rail">
+      <header className="nav">
         <Brand />
-        <nav aria-label="Navigation principale">
+        <nav className="appnav" aria-label="Navigation principale">
           <NavLink to="/" end>
-            <MapPin size={20} aria-hidden /> <span>Prospection</span>
+            <MapPin size={17} aria-hidden /> <span>Prospection</span>
           </NavLink>
           <NavLink to="/sites">
-            <PanelsTopLeft size={20} aria-hidden /> <span>Mes sites</span>
+            <PanelsTopLeft size={17} aria-hidden /> <span>Mes sites</span>
           </NavLink>
           <NavLink to="/templates">
-            <LayoutTemplate size={20} aria-hidden /> <span>Modèles</span>
+            <LayoutTemplate size={17} aria-hidden /> <span>Modèles</span>
           </NavLink>
         </nav>
-        <div className="rail-foot">
+        <div className="nav-right">
           <div className="credits" title="Une création de site coûte 100 crédits">
             <strong>{user?.credits.toLocaleString('fr-FR')}</strong>
             <span>crédits</span>
@@ -52,28 +53,43 @@ function Shell() {
             </button>
           </div>
         </div>
-      </aside>
-      <main className="stage">
-        <Outlet />
-      </main>
+      </header>
+      <main className="stage">{children}</main>
     </div>
+  );
+}
+
+function ShellOutlet() {
+  return (
+    <RequireAuth>
+      <Shell>
+        <Outlet />
+      </Shell>
+    </RequireAuth>
+  );
+}
+
+/** « / » : la page d'accueil pour les visiteurs, la carte de prospection une fois connecté. */
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading) return <p className="boot muted">Chargement…</p>;
+  return user ? (
+    <Shell>
+      <Prospects />
+    </Shell>
+  ) : (
+    <Landing />
   );
 }
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/pay/:token" element={<Pay />} />
-      <Route
-        element={
-          <RequireAuth>
-            <Shell />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<Prospects />} />
+      <Route element={<ShellOutlet />}>
         <Route path="sites" element={<Sites />} />
         <Route path="sites/new" element={<NewSite />} />
         <Route path="sites/:id" element={<SiteEditor />} />
