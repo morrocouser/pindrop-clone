@@ -15,6 +15,10 @@ export const kindLabel = (k: string): string => KINDS[k] ?? k.replace(/_/g, ' ')
 
 const RADII = [500, 1000, 2000];
 const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522];
+const EXAMPLE: Prospect = {
+  id: 'demo/cafe', name: 'Café du Papier — Démo', kind: 'cafe', lat: DEFAULT_CENTER[0], lon: DEFAULT_CENTER[1],
+  address: '12 passage Imaginaire, Paris (adresse fictive)', phone: ''
+};
 
 function pinIcon(selected: boolean): L.DivIcon {
   return L.divIcon({
@@ -39,6 +43,7 @@ export default function Prospects() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const isExample = results?.[0]?.id === EXAMPLE.id;
 
   // Création unique de la carte
   useEffect(() => {
@@ -127,6 +132,15 @@ export default function Prospects() {
     flyTo(p.lat, p.lon);
   }
 
+  function showExample() {
+    area.current?.remove();
+    area.current = null;
+    setNotice('');
+    setError('');
+    setResults([EXAMPLE]);
+    select(EXAMPLE);
+  }
+
   function createSite(p: Prospect) {
     navigate('/sites/new', { state: { prospect: p } });
   }
@@ -134,7 +148,7 @@ export default function Prospects() {
   return (
     <div className="map-page">
       <section className="map-panel" aria-label="Recherche de prospects">
-<h1 className="map-title">Trouver des commerces sans site</h1>
+        <h1 className="map-title">Trouver des commerces sans site</h1>
         <form className="searchbar" onSubmit={onPlace} role="search">
           <Search size={18} aria-hidden />
           <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Ville, quartier ou adresse" aria-label="Lieu à chercher" />
@@ -154,6 +168,7 @@ export default function Prospects() {
         <button className="btn block" onClick={search} disabled={loading}>
           {loading ? 'Recherche en cours…' : 'Chercher autour du centre de la carte'}
         </button>
+        <button type="button" className="btn secondary block" onClick={showExample} disabled={loading}>Essayer avec un commerce fictif</button>
         {loading && <p className="muted small">La base cartographique publique peut mettre jusqu'à une minute à répondre.</p>}
         {error && (
           <p className="error" role="alert">
@@ -161,7 +176,7 @@ export default function Prospects() {
           </p>
         )}
 
-        {results && (
+        {isExample ? <p className="count" role="status">Exemple fictif : aucune recherche réelle, aucun commerçant contacté.</p> : results && (
           <p className="count">
             <strong>{results.length}</strong> {results.length > 1 ? 'commerces semblent' : 'commerce semble'} sans site web
           </p>
@@ -185,7 +200,7 @@ export default function Prospects() {
             </li>
           ))}
         </ul>
-        {results && results.length > 0 && <p className="muted small">« Sans site » vient des données OpenStreetMap : vérifiez avec le commerçant.</p>}
+        {!isExample && results && results.length > 0 && <p className="muted small">« Sans site » vient des données OpenStreetMap : vérifiez avec le commerçant.</p>}
       </section>
 
       <div className="map-wrap">
