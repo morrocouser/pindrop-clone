@@ -1,0 +1,72 @@
+name: pindrop-demo
+services:
+  init:
+    image: node:22-bookworm
+    network_mode: none
+    volumes:
+      - secrets:/settings
+    command:
+      - node
+      - -e
+      - |
+        const fs = require('node:fs');
+        const crypto = require('node:crypto');
+        for (const key of ['postgres', 'jwt']) {
+          const file = '/settings/' + key;
+          if (!fs.existsSync(file)) fs.writeFileSync(file, crypto.randomBytes(32).toString('hex'), {flag:'wx', mode:0o444});
+        }
+  db:
+    image: postgres:16-bookworm
+    depends_on:
+      init: {condition: service_completed_successfully}
+    environment:
+      POSTGRES_DB: pindrop
+      POSTGRES_USER: pindrop
+      POSTGRES_PASSWORD_FILE: /settings/postgres
+    volumes:
+      - database:/var/lib/postgresql/data
+      - secrets:/settings:ro
+    healthcheck:
+      test: [CMD, pg_isready, -h, '127.0.0.1', -U, pindrop, -d, pindrop]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  api:
+    build: {context: ., dockerfile: demo/Dockerfile, target: api}
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - secrets:/settings:ro
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      PAYMENTS_MODE: test
+      PUBLIC_BASE_URL: http://127.0.0.1:3000
+      CORS_ORIGIN: http://127.0.0.1:5173
+    command:
+      - sh
+      - -ec
+      - |
+        export DATABASE_URL="postgresql://pindrop:$$(cat /settings/postgres)@db:5432/pindrop"
+        export JWT_SECRET="$$(cat /settings/jwt)"
+        ./node_modules/.bin/prisma migrate deploy
+        exec node dist/server.js
+    ports: ['127.0.0.1:3000:3000']
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/templates').then(async r=>{if(!r.ok || !(await r.json()).length) process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  web:
+    build: {context: ., dockerfile: demo/Dockerfile, target: web}
+    depends_on:
+      api: {condition: service_healthy}
+    ports: ['127.0.0.1:5173:5173']
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:5173/').then(r=>{if(!r.ok) process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  database:
+  secrets:
