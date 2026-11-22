@@ -19,7 +19,7 @@ const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522];
 function pinIcon(selected: boolean): L.DivIcon {
   return L.divIcon({
     className: 'pin-icon',
-    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#0a2540' : '#2345bb'}" stroke="#fff" stroke-width="1.6"/><circle cx="16" cy="11" r="3.5" fill="#fff"/></svg>`,
+    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#111827' : '#2345bb'}" stroke="#fff" stroke-width="1.6"/><circle cx="16" cy="11" r="3.5" fill="#fff"/></svg>`,
     iconSize: [selected ? 38 : 30, selected ? 38 : 30],
     iconAnchor: [selected ? 19 : 15, selected ? 38 : 30]
   });
