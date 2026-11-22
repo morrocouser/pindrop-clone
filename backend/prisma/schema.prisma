@@ -19,24 +19,40 @@ enum BusinessStatus {
   inactive
 }
 
+enum SiteStatus {
+  draft
+  preview
+  live
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  canceled
+}
+
 model User {
-  id            Int        @id @default(autoincrement())
-  email         String     @unique @db.VarChar(255)
-  password_hash String     @db.VarChar(255)
-  first_name    String?    @db.VarChar(100)
-  last_name     String?    @db.VarChar(100)
-  role          Role       @default(customer)
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @updatedAt
+  id            Int           @id @default(autoincrement())
+  email         String        @unique @db.VarChar(255)
+  password_hash String        @db.VarChar(255)
+  first_name    String?       @db.VarChar(100)
+  last_name     String?       @db.VarChar(100)
+  role          Role          @default(customer)
+  credits       Int           @default(3000)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
   last_login    DateTime?
   businesses    Business[]
   templates     Template[]
+  sites         Site[]
+  credit_log    CreditEntry[]
 
   @@map("users")
 }
 
 model Template {
   id            Int      @id @default(autoincrement())
+  key           String   @unique @db.VarChar(50)
   name          String   @db.VarChar(255)
   category      String   @db.VarChar(100)
   industry      String   @db.VarChar(100)
@@ -69,4 +85,54 @@ model Business {
 
   @@index([user_id])
   @@map("businesses")
+}
+
+model Site {
+  id                 Int           @id @default(autoincrement())
+  user_id            Int
+  name               String        @db.VarChar(255)
+  slug               String        @unique @db.VarChar(100)
+  template_key       String        @db.VarChar(50)
+  lang               String        @default("fr") @db.VarChar(5)
+  content            Json
+  source             Json?
+  status             SiteStatus    @default(draft)
+  preview_expires_at DateTime?
+  published_at       DateTime?
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
+  owner              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  payment_links      PaymentLink[]
+
+  @@index([user_id])
+  @@map("sites")
+}
+
+model PaymentLink {
+  id            Int           @id @default(autoincrement())
+  site_id       Int
+  token         String        @unique @db.VarChar(64)
+  setup_cents   Int
+  monthly_cents Int
+  status        PaymentStatus @default(pending)
+  fee_cents     Int           @default(0)
+  payout_cents  Int           @default(0)
+  paid_at       DateTime?
+  created_at    DateTime      @default(now())
+  site          Site          @relation(fields: [site_id], references: [id], onDelete: Cascade)
+
+  @@index([site_id])
+  @@map("payment_links")
+}
+
+model CreditEntry {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  delta      Int
+  reason     String   @db.VarChar(100)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("credit_entries")
 }

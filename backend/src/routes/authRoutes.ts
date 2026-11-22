@@ -30,8 +30,8 @@ const loginSchema = z.object({
   password: z.string().min(1).max(72)
 });
 
-function publicUser(u: { id: number; email: string; first_name: string | null; last_name: string | null; role: string }) {
-  return { id: u.id, email: u.email, firstName: u.first_name, lastName: u.last_name, role: u.role };
+function publicUser(u: { id: number; email: string; first_name: string | null; last_name: string | null; role: string; credits: number }) {
+  return { id: u.id, email: u.email, firstName: u.first_name, lastName: u.last_name, role: u.role, credits: u.credits };
 }
 
 router.post('/register', authLimiter, async (req: Request, res: Response) => {

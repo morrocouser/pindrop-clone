@@ -1,0 +1,365 @@
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Check, Copy, ExternalLink, Monitor, Smartphone } from 'lucide-react';
+import { api, errorText, money, Site, SiteContent, Template } from '../api';
+import { StatusBadge } from '../components/StatusBadge';
+
+interface Draft {
+  name: string;
+  template_key: string;
+  lang: 'fr' | 'en';
+  headline: string;
+  tagline: string;
+  about: string;
+  cta: string;
+  services: string;
+  hours: string;
+  photos: string;
+  phone: string;
+  email: string;
+  address: string;
+  primary: string;
+  accent: string;
+}
+
+const lines = (s: string): string[] => s.split('\n').map((l) => l.trim()).filter(Boolean);
+
+function toDraft(s: Site): Draft {
+  const c = s.content;
+  return {
+    name: s.name, template_key: s.template_key, lang: s.lang,
+    headline: c.headline, tagline: c.tagline, about: c.about, cta: c.cta,
+    services: c.services.join('\n'), hours: c.hours.join('\n'), photos: c.photos.join('\n'),
+    phone: c.phone, email: c.email, address: c.address, primary: c.colors.primary, accent: c.colors.accent
+  };
+}
+
+function toContent(d: Draft): SiteContent {
+  return {
+    headline: d.headline.trim(), tagline: d.tagline.trim(), about: d.about.trim(), cta: d.cta.trim(),
+    services: lines(d.services), hours: lines(d.hours), photos: lines(d.photos),
+    phone: d.phone.trim(), email: d.email.trim(), address: d.address.trim(),
+    colors: { primary: d.primary, accent: d.accent }
+  };
+}
+
+function CopyField({ value }: { value: string }) {
+  const [done, setDone] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1800);
+    } catch {
+      /* presse-papiers indisponible : le champ reste sélectionnable */
+    }
+  }
+  return (
+    <div className="copyfield">
+      <input readOnly value={value} onFocus={(e) => e.currentTarget.select()} aria-label="Lien" />
+      <button type="button" className="icon-btn" onClick={copy} aria-label="Copier le lien" title="Copier le lien">
+        {done ? <Check size={18} aria-hidden /> : <Copy size={18} aria-hidden />}
+      </button>
+    </div>
+  );
+}
+
+export default function SiteEditor() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const siteId = Number(id);
+
+  const [site, setSite] = useState<Site | null>(null);
+  const [saved, setSaved] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [html, setHtml] = useState('');
+  const [previewError, setPreviewError] = useState('');
+  const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [amounts, setAmounts] = useState({ setup: '300', monthly: '49' });
+
+  const apply = useCallback((s: Site) => {
+    setSite(s);
+    const d = toDraft(s);
+    setSaved(d);
+    setDraft(d);
+  }, []);
+
+  useEffect(() => {
+    if (!Number.isInteger(siteId)) return setError('Site introuvable');
+    api.site(siteId).then(apply).catch((e: unknown) => setError(errorText(e)));
+    api.templates().then(setTemplates).catch(() => setTemplates([]));
+  }, [siteId, apply]);
+
+  const dirty = useMemo(() => !!draft && !!saved && JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
+
+  // Aperçu en direct : rendu côté serveur, avec un délai pour ne pas appeler l'API à chaque frappe
+  const seq = useRef(0);
+  useEffect(() => {
+    if (!draft) return;
+    const mine = ++seq.current;
+    const t = setTimeout(() => {
+      api
+        .renderPreview({ name: draft.name || 'Site', template_key: draft.template_key, lang: draft.lang, content: toContent(draft) })
+        .then((r) => {
+          if (mine !== seq.current) return;
+          setHtml(r.html);
+          setPreviewError('');
+        })
+        .catch((e: unknown) => mine === seq.current && setPreviewError(errorText(e)));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [draft]);
+
+  const set = (key: keyof Draft) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setDraft((d) => (d ? { ...d, [key]: e.target.value } : d));
+
+  async function save() {
+    if (!draft) return;
+    setSaving(true);
+    setError('');
+    try {
+      apply(await api.updateSite(siteId, { name: draft.name.trim(), template_key: draft.template_key, lang: draft.lang, content: toContent(draft) }));
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function run(label: string, fn: () => Promise<Site>) {
+    setBusy(label);
+    setError('');
+    try {
+      const s = await fn();
+      setSite(s);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function remove() {
+    if (!site || !window.confirm(`Supprimer définitivement « ${site.name} » ? Cette action est irréversible.`)) return;
+    try {
+      await api.deleteSite(siteId);
+      navigate('/sites', { replace: true });
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
+
+  if (error && !site) return <p className="page-pad error" role="alert">{error}</p>;
+  if (!site || !draft) return <p className="page-pad muted">Chargement…</p>;
+
+  const link = site.payment_links.find((p) => p.status === 'pending');
+  const paid = site.payment_links.find((p) => p.status === 'paid');
+  const setupCents = Math.round(Number(amounts.setup || 0) * 100);
+  const monthlyCents = Math.round(Number(amounts.monthly || 0) * 100);
+  const firstCharge = setupCents + monthlyCents;
+  const previewLive = site.status === 'preview' && !site.preview_expired;
+
+  return (
+    <div className="editor">
+      <div className="editor-form">
+        <div className="page-head">
+          <div>
+            <h1>{site.name}</h1>
+            <StatusBadge site={site} />
+          </div>
+          <div className="actions">
+            <button className="btn" onClick={save} disabled={!dirty || saving}>
+              {saving ? 'Enregistrement…' : dirty ? 'Enregistrer' : 'Enregistré'}
+            </button>
+          </div>
+        </div>
+        {error && <p className="error" role="alert">{error}</p>}
+
+        <section className="panel">
+          <h2>Diffusion</h2>
+          {dirty && <p className="notice">Enregistrez vos modifications avant de publier : la publication utilise la version enregistrée.</p>}
+
+          {paid ? (
+            <p>Payé : {money(paid.setup_cents + paid.monthly_cents)}, dont {money(paid.payout_cents)} pour vous. Le site est en ligne.</p>
+          ) : (
+            <>
+              <p className="muted">Montrez le site au commerçant avant de lui demander quoi que ce soit.</p>
+              {previewLive && site.public_url && <CopyField value={site.public_url} />}
+              <div className="actions">
+                {!previewLive && (
+                  <button className="btn secondary" disabled={dirty || !!busy} onClick={() => run('preview', () => api.publishSite(siteId, 'preview'))}>
+                    {busy === 'preview' ? 'Publication…' : 'Publier un aperçu de 7 jours'}
+                  </button>
+                )}
+                {previewLive && (
+                  <>
+                    <a className="btn secondary" href={site.public_url ?? '#'} target="_blank" rel="noopener noreferrer">
+                      Ouvrir <ExternalLink size={16} aria-hidden />
+                    </a>
+                    <button className="btn ghost" disabled={!!busy} onClick={() => run('unpublish', () => api.unpublishSite(siteId))}>
+                      Retirer l'aperçu
+                    </button>
+                  </>
+                )}
+              </div>
+              {site.preview_expired && <p className="muted small">L'aperçu précédent a expiré. Publiez-en un nouveau.</p>}
+            </>
+          )}
+
+          {paid && site.public_url && <CopyField value={site.public_url} />}
+
+          {!paid && (
+            <>
+              <h3>Faire payer le commerçant</h3>
+              <div className="row">
+                <label>
+                  Création ($)
+                  <input type="number" min="0" step="1" value={amounts.setup} onChange={(e) => setAmounts({ ...amounts, setup: e.target.value })} />
+                </label>
+                <label>
+                  Par mois ($)
+                  <input type="number" min="0" step="1" value={amounts.monthly} onChange={(e) => setAmounts({ ...amounts, monthly: e.target.value })} />
+                </label>
+              </div>
+              <p className="muted small">
+                {firstCharge > 0
+                  ? `Premier paiement : ${money(firstCharge)}. Vous gardez 90 % : ${money(Math.round(firstCharge * 0.9))}.`
+                  : 'Indiquez au moins un montant.'}
+              </p>
+              <button
+                className="btn secondary"
+                disabled={firstCharge <= 0 || !!busy}
+                onClick={() => run('link', () => api.paymentLink(siteId, { setup_amount: setupCents / 100, monthly_amount: monthlyCents / 100 }))}
+              >
+                {busy === 'link' ? 'Création…' : link ? 'Remplacer le lien de paiement' : 'Créer le lien de paiement'}
+              </button>
+              {link && (
+                <>
+                  <CopyField value={`${window.location.origin}/pay/${link.token}`} />
+                  <p className="muted small">
+                    Le site passe en ligne dès que le commerçant a payé ({money(link.setup_cents)} + {money(link.monthly_cents)} / mois).
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </section>
+
+        <section className="panel form">
+          <h2>Contenu</h2>
+          <p className="notice">Les textes de départ sont génériques : relisez-les et ajoutez les vraies informations (horaires, photos) avant de publier.</p>
+          <label>
+            Nom du commerce
+            <input value={draft.name} onChange={set('name')} maxLength={255} />
+          </label>
+          <label>
+            Titre principal
+            <input value={draft.headline} onChange={set('headline')} maxLength={120} />
+          </label>
+          <label>
+            Sous-titre
+            <input value={draft.tagline} onChange={set('tagline')} maxLength={200} />
+          </label>
+          <label>
+            Texte de présentation
+            <textarea rows={4} value={draft.about} onChange={set('about')} maxLength={1500} />
+          </label>
+          <label>
+            Bouton d'action
+            <input value={draft.cta} onChange={set('cta')} maxLength={40} />
+          </label>
+          <label>
+            Services (un par ligne)
+            <textarea rows={3} value={draft.services} onChange={set('services')} />
+          </label>
+          <label>
+            Horaires (un par ligne)
+            <textarea rows={3} value={draft.hours} onChange={set('hours')} placeholder="Lun – Ven : 9h – 18h" />
+          </label>
+          <label>
+            Photos (adresses https, une par ligne)
+            <textarea rows={3} value={draft.photos} onChange={set('photos')} placeholder="https://…" />
+          </label>
+        </section>
+
+        <section className="panel form">
+          <h2>Coordonnées</h2>
+          <div className="row">
+            <label>
+              Téléphone
+              <input value={draft.phone} onChange={set('phone')} maxLength={50} />
+            </label>
+            <label>
+              E-mail
+              <input type="email" value={draft.email} onChange={set('email')} maxLength={255} />
+            </label>
+          </div>
+          <label>
+            Adresse
+            <input value={draft.address} onChange={set('address')} maxLength={300} />
+          </label>
+        </section>
+
+        <section className="panel form">
+          <h2>Apparence</h2>
+          <div className="row">
+            <label>
+              Modèle
+              <select value={draft.template_key} onChange={set('template_key')}>
+                {templates.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Langue
+              <select value={draft.lang} onChange={set('lang')}>
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
+          <div className="row">
+            <label>
+              Couleur principale
+              <input type="color" value={draft.primary} onChange={set('primary')} />
+            </label>
+            <label>
+              Couleur d'accent
+              <input type="color" value={draft.accent} onChange={set('accent')} />
+            </label>
+          </div>
+        </section>
+
+        <button className="btn danger" onClick={remove}>
+          Supprimer ce site
+        </button>
+      </div>
+
+      <div className="editor-preview">
+        <div className="preview-bar">
+          <span className="muted small">Aperçu</span>
+          <div className="radius" role="group" aria-label="Taille de l'aperçu">
+            <button type="button" className={device === 'desktop' ? 'seg on' : 'seg'} aria-pressed={device === 'desktop'} onClick={() => setDevice('desktop')}>
+              <Monitor size={16} aria-hidden /> Ordinateur
+            </button>
+            <button type="button" className={device === 'mobile' ? 'seg on' : 'seg'} aria-pressed={device === 'mobile'} onClick={() => setDevice('mobile')}>
+              <Smartphone size={16} aria-hidden /> Mobile
+            </button>
+          </div>
+        </div>
+        {previewError && <p className="error small" role="alert">{previewError}</p>}
+        <div className={`frame ${device}`}>
+          {/* sandbox sans autorisation : le contenu du site ne peut exécuter aucun script */}
+          <iframe title="Aperçu du site" sandbox="" srcDoc={html} />
+        </div>
+      </div>
+    </div>
+  );
+}

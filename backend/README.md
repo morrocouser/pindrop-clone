@@ -110,24 +110,6 @@ Response:
 ]
 ```
 
-**POST /api/templates**
-Create new template
-
-Request Body:
-```json
-{
-  "name": "New Template",
-  "category": "Category",
-  "industry": "Industry",
-  "description": "Template description",
-  "thumbnail_url": "https://example.com/template.jpg",
-  "price": 0,
-  "features": ["feature1", "feature2"],
-  "languages": ["en", "es"],
-  "created_by": 1
-}
-```
-
 **GET /api/templates/:id**
 Get template by ID
 
@@ -149,7 +131,7 @@ Response:
 
 #### Access rules
 - `/api/businesses/*` require a token; non-admins only see/create their own businesses (status is always `pending`).
-- `GET /api/templates` is public; `POST /api/templates` is admin only.
+- `GET /api/templates` is public and read-only (the catalogue lives in `src/sites/styles.ts`).
 - Socket.IO connections must pass `auth: { token }`.
 
 #### Businesses
@@ -191,6 +173,25 @@ Request Body:
   "status": "pending"
 }
 ```
+
+## Sites, prospection et paiements
+
+Toutes ces routes (sauf les pages publiques) demandent `Authorization: Bearer <token>`.
+
+| Route | Rôle |
+|---|---|
+| `GET /api/geocode?q=` | Cherche un lieu (Nominatim) |
+| `GET /api/prospects?lat&lon&radius` | Commerces OpenStreetMap sans site web renseigné (Overpass) |
+| `GET/POST /api/sites` | Liste / crée un site à partir d'un modèle (100 crédits) |
+| `GET/PATCH/DELETE /api/sites/:id` | Lit / modifie (gratuit) / supprime |
+| `POST /api/sites/preview` | Rendu HTML d'un brouillon, sans l'enregistrer |
+| `POST /api/sites/:id/publish` | `{mode:"preview"}` : aperçu de 7 jours ; `{mode:"live"}` : seulement après paiement |
+| `POST /api/sites/:id/payment-link` | Crée un lien de paiement (création + mensuel) |
+| `GET /api/earnings` | Montants reçus (90 %) et revenu mensuel récurrent |
+| `GET /s/:slug` | Page publique du site (sans script, indexable seulement une fois payé) |
+| `GET /api/pay/:token`, `POST /api/pay/:token/confirm` | Page de paiement du commerçant |
+
+**Paiements** : `PAYMENTS_MODE=test` (par défaut) simule le paiement, sans aucun débit réel. La commission de 10 % est calculée comme sur Pindrop. Le vrai paiement par carte (Stripe) reste à brancher. **Prospection** : les serveurs publics OpenStreetMap peuvent répondre lentement (jusqu'à une minute) ; « sans site » signifie « sans site renseigné dans OpenStreetMap ».
 
 ## Database Schema
 

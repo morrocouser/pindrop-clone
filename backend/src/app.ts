@@ -5,6 +5,9 @@ import { config } from './config';
 import authRoutes from './routes/authRoutes';
 import businessRoutes from './routes/businessRoutes';
 import templateRoutes from './routes/templateRoutes';
+import prospectRoutes from './routes/prospectRoutes';
+import { payRouter, siteRouter } from './routes/publicRoutes';
+import sitesRoutes, { earningsRouter } from './routes/sitesRoutes';
 
 const app = express();
 
@@ -16,6 +19,11 @@ app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/businesses', businessRoutes);
+app.use('/api/sites', sitesRoutes);
+app.use('/api/earnings', earningsRouter);
+app.use('/api/pay', payRouter);
+app.use('/api', prospectRoutes);
+app.use('/s', siteRouter);
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
