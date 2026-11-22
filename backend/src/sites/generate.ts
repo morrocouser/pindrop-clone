@@ -10,7 +10,7 @@ export interface GenerateInput {
   lang: 'fr' | 'en';
 }
 
-type Category = 'food' | 'beauty' | 'auto' | 'health' | 'retail' | 'craft';
+type Category = 'food' | 'beauty' | 'auto' | 'health' | 'retail' | 'craft' | 'realestate';
 
 const CATEGORY_OF: Record<string, Category> = {
   restaurant: 'food', cafe: 'food', fast_food: 'food', bar: 'food', pub: 'food', bakery: 'food', pastry: 'food',
@@ -18,6 +18,7 @@ const CATEGORY_OF: Record<string, Category> = {
   hairdresser: 'beauty', beauty: 'beauty', barber: 'beauty', cosmetics: 'beauty', massage: 'beauty', tattoo: 'beauty',
   car_repair: 'auto', car_wash: 'auto', car: 'auto', tyres: 'auto', motorcycle: 'auto',
   dentist: 'health', clinic: 'health', doctors: 'health', pharmacy: 'health', optician: 'health',
+  estate_agent: 'realestate', lawyer: 'realestate', notary: 'realestate', insurance: 'realestate', accountant: 'realestate',
   plumber: 'craft', electrician: 'craft', carpenter: 'craft', painter: 'craft', hvac: 'craft', locksmith: 'craft'
 };
 
@@ -66,6 +67,13 @@ const COPY: Record<'fr' | 'en', Record<Category, Copy>> = {
       services: ['Conseils en boutique', 'Produits sélectionnés'],
       cta: 'Nous contacter'
     },
+    realestate: {
+      headline: (n) => `${n}, un conseil sur lequel compter`,
+      tagline: 'Un accompagnement clair, de la première visite à la signature.',
+      about: (n) => `${n} vous accompagne dans vos projets avec écoute et transparence. Contactez-nous pour en parler.`,
+      services: ['Conseil personnalisé', 'Rendez-vous sur demande'],
+      cta: 'Nous contacter'
+    },
     craft: {
       headline: (n) => `${n}, du travail bien fait`,
       tagline: 'Intervention rapide et devis gratuit.',
@@ -108,6 +116,13 @@ const COPY: Record<'fr' | 'en', Record<Category, Copy>> = {
       tagline: 'Come and see the shop, we are waiting for you.',
       about: (n) => `${n} is a neighborhood shop where we take the time to help you choose. Come and visit us in store.`,
       services: ['In-store advice', 'Selected products'],
+      cta: 'Contact us'
+    },
+    realestate: {
+      headline: (n) => `${n}, advice you can rely on`,
+      tagline: 'Clear guidance, from the first visit to the signature.',
+      about: (n) => `${n} supports your projects with care and transparency. Get in touch to talk it through.`,
+      services: ['Personal advice', 'Appointments on request'],
       cta: 'Contact us'
     },
     craft: {

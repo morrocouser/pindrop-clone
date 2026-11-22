@@ -14,6 +14,12 @@ export interface SiteStyle {
   muted: string;
   primary: string;
   accent: string;
+  /** Mise en page spécifique ; "standard" par défaut. */
+  layout?: 'standard' | 'grill';
+  /** Affiche les services en tuiles plutôt qu'en liste. */
+  tiles?: boolean;
+  /** Mention de licence si le modèle est adapté d'un projet open source. */
+  credit?: string;
 }
 
 export const SITE_STYLES: SiteStyle[] = [
@@ -112,6 +118,75 @@ export const SITE_STYLES: SiteStyle[] = [
     muted: '#666666',
     primary: '#111111',
     accent: '#ff4d2e'
+  },
+  {
+    // Adapté de « Grilli » (MIT, © 2022 Sadee) : voir THIRD_PARTY_NOTICES.md
+    key: 'grill',
+    name: 'Grill',
+    category: 'Restauration',
+    industry: 'Restaurant gastronomique, bar à cocktails',
+    description: "Noir profond, filets dorés et grand titre : l'ambiance d'une table de soirée. Adapté du modèle open source Grilli.",
+    hero: 'center',
+    layout: 'grill',
+    credit: 'Adapté de Grilli par Sadee (licence MIT)',
+    fontDisplay: 'Forum',
+    fontBody: 'DM Sans',
+    bg: '#0c0b09',
+    surface: '#161514',
+    ink: '#ffffff',
+    muted: '#a6a6a6',
+    primary: '#e4c590',
+    accent: '#e4c590'
+  },
+  {
+    key: 'barbier',
+    name: 'Barbier',
+    category: 'Beauté et bien-être',
+    industry: 'Barbier, tatoueur, salon masculin',
+    description: 'Anthracite et cuivre, titres condensés : un salon qui assume son caractère.',
+    hero: 'band',
+    tiles: true,
+    fontDisplay: 'Oswald',
+    fontBody: 'Work Sans',
+    bg: '#1f2226',
+    surface: '#2a2e33',
+    ink: '#f1ede8',
+    muted: '#aeb3b8',
+    primary: '#b4693a',
+    accent: '#d98f5c'
+  },
+  {
+    key: 'immo',
+    name: 'Immo',
+    category: 'Services',
+    industry: 'Agence immobilière, notaire, conseil',
+    description: 'Bleu nuit et serif classique : de la sobriété pour inspirer confiance.',
+    hero: 'split',
+    tiles: true,
+    fontDisplay: 'Playfair Display',
+    fontBody: 'Source Sans 3',
+    bg: '#f6f7f9',
+    surface: '#ffffff',
+    ink: '#14213d',
+    muted: '#566078',
+    primary: '#14213d',
+    accent: '#c8a24a'
+  },
+  {
+    key: 'torrefacteur',
+    name: 'Torréfacteur',
+    category: 'Commerce de proximité',
+    industry: 'Café, torréfacteur, salon de thé',
+    description: 'Brun expresso et titres généreux : chaleureux et gourmand.',
+    hero: 'center',
+    fontDisplay: 'DM Serif Display',
+    fontBody: 'Karla',
+    bg: '#fbf6ef',
+    surface: '#ffffff',
+    ink: '#2b1d14',
+    muted: '#765f4e',
+    primary: '#3b2417',
+    accent: '#d9822b'
   }
 ];
 
