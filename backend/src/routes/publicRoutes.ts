@@ -1,10 +1,13 @@
+import path from 'path';
 import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config';
 import { prisma } from '../database';
 import { contentSchema } from '../sites/content';
 import { esc, renderSite } from '../sites/render';
-import { STYLE_BY_KEY } from '../sites/styles';
+import { PACKS_DIR } from '../sites/packs';
+import { getPreview } from '../sites/previewStore';
+import { SITE_STYLES, STYLE_BY_KEY } from '../sites/styles';
 
 export const siteRouter = express.Router();
 export const payRouter = express.Router();
@@ -22,14 +25,61 @@ const SITE_CSP = [
   'sandbox'
 ].join('; ');
 
+// Gabarits open source complets : ils ont leurs propres scripts (menu, animations) et chargent
+// polices et icônes depuis des CDN. La page reste isolée (sandbox sans allow-same-origin).
+// Page sandboxée = origine opaque : « 'self' » ne correspond plus à rien, on nomme donc l'origine de l'API.
+const SELF = config.publicBaseUrl;
+const PACK_CSP = [
+  "default-src 'none'",
+  `script-src ${SELF} 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com`,
+  `style-src ${SELF} 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
+  `font-src ${SELF} data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net`,
+  `img-src ${SELF} https: data:`,
+  // Les icônes Ionicons sont chargées par fetch depuis unpkg
+  "connect-src https://unpkg.com https://cdn.jsdelivr.net",
+  `base-uri ${SELF}`,
+  "form-action 'none'",
+  "frame-ancestors 'none'"
+].join('; ');
+
+const STATIC_EXT = new Set(['.css', '.js', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot']);
+
+/** Fichiers statiques des gabarits : /t/<clé>/... (jamais le HTML source, qui contient les champs). */
+export const packRouter = express.Router();
+packRouter.use('/:key', (req: Request, res: Response, next) => {
+  const known = SITE_STYLES.some((s) => s.pack === req.params.key);
+  if (!known || (req.path !== '/LICENSE' && !STATIC_EXT.has(path.extname(req.path).toLowerCase()))) return res.status(404).end();
+  // Les pages de sites sont isolées (origine « null ») : leurs polices et modules exigent un en-tête CORS ouvert
+  res.removeHeader('Access-Control-Allow-Credentials');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  return express.static(path.join(PACKS_DIR, req.params.key), { index: false, dotfiles: 'ignore', maxAge: '1h' })(req, res, next);
+});
+
 function infoPage(title: string, message: string): string {
   return `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><body style="font:18px/1.5 system-ui;max-width:32rem;margin:20vh auto;padding:0 20px"><h1 style="font-size:1.6rem">${esc(title)}</h1><p>${esc(message)}</p></body></html>`;
 }
+
+// Aperçu d'un brouillon (voir previewStore) : URL non devinable, expire au bout de 10 minutes
+siteRouter.get('/_p/:id', (req: Request, res: Response) => {
+  const p = getPreview(req.params.id);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  if (!p) return res.status(404).send(infoPage('Aperçu expiré', "Rechargez l'éditeur pour régénérer l'aperçu."));
+  // Seul l'éditeur (origines autorisées de l'application) peut afficher cet aperçu dans un iframe
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', (p.pack ? PACK_CSP : SITE_CSP).replace("frame-ancestors 'none'", 'frame-ancestors ' + config.corsOrigins.join(' ')));
+  return res.send(p.html);
+});
 
 siteRouter.get('/:slug', async (req: Request, res: Response) => {
   res.setHeader('Content-Security-Policy', SITE_CSP);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   try {
+    // Le gabarit choisi détermine la politique : les modèles complets ont besoin de leurs scripts
+    const chosen = await prisma.site.findUnique({ where: { slug: req.params.slug }, select: { template_key: true } });
+    if (chosen && STYLE_BY_KEY.get(chosen.template_key)?.pack) res.setHeader('Content-Security-Policy', PACK_CSP);
     const site = await prisma.site.findUnique({ where: { slug: req.params.slug } });
     if (!site || site.status === 'draft') return res.status(404).send(infoPage('Page introuvable', "Ce site n'existe pas ou n'est pas publié."));
     if (site.status === 'preview' && site.preview_expires_at && site.preview_expires_at < new Date()) {

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 
+    - primary meta tags
+  -->
+  <title>{{name}}</title>
+    
+  <!-- 
+    - favicon
+  -->
+  
+  <!-- 
+    - google font link
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Forum&display=swap" rel="stylesheet">
+
+  <!-- 
+    - custom css link
+  -->
+  <link rel="stylesheet" href="./assets/css/style.css">
+
+  <!-- 
+    - preload images
+  -->
+      
+<style>
+.slider-btn{display:none!important}
+.logo .brand-text{font-family:var(--fontFamily-forum);font-size:3rem;color:var(--white);letter-spacing:.08em;line-height:1}
+.services-list{list-style:none;margin:0 0 30px;padding:0;display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:center;color:var(--gold-crayola);font-size:1.6rem}
+.contact-section{background:var(--eerie-black-1)}
+.contact-line{display:block;color:var(--quick-silver);margin-block:8px;font-style:normal}
+.hours-list{list-style:none;margin:16px 0;padding:0;color:var(--quick-silver);font-size:1.6rem}
+.hours-list li{margin:6px 0}
+.contact-section .contact-number{margin-block:14px}
+</style>
+</head>
+
+<body id="top">
+
+  <!-- 
+    - #PRELOADER
+  -->
+
+  <div class="preload" data-preaload>
+    <div class="circle"></div>
+    <p class="text">{{name}}</p>
+  </div>
+
+
+
+
+
+  <!-- 
+    - #TOP BAR
+  -->
+
+  <div class="topbar">
+    <div class="container">
+      {{#address}}<address class="topbar-item"><div class="icon"><ion-icon name="location-outline" aria-hidden="true"></ion-icon></div><span class="span">{{address}}</span></address>{{/address}}
+      {{#hours_line}}<div class="separator"></div>
+      <div class="topbar-item item-2"><div class="icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></div><span class="span">{{hours_line}}</span></div>{{/hours_line}}
+      {{#phone}}<a href="tel:{{phone_digits}}" class="topbar-item link"><div class="icon"><ion-icon name="call-outline" aria-hidden="true"></ion-icon></div><span class="span">{{phone}}</span></a>{{/phone}}
+      {{#email}}<div class="separator"></div>
+      <a href="mailto:{{email}}" class="topbar-item link"><div class="icon"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon></div><span class="span">{{email}}</span></a>{{/email}}
+    </div>
+  </div>
+
+  <header class="header" data-header>
+    <div class="container">
+      <a href="#home" class="logo"><span class="brand-text">{{name}}</span></a>
+      <nav class="navbar" data-navbar>
+        <button class="close-btn" aria-label="close menu" data-nav-toggler><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+        <a href="#home" class="logo"><span class="brand-text">{{name}}</span></a>
+        <ul class="navbar-list">
+          <li class="navbar-item"><a href="#home" class="navbar-link hover-underline active"><div class="separator"></div><span class="span">{{l_home}}</span></a></li>
+          <li class="navbar-item"><a href="#about" class="navbar-link hover-underline"><div class="separator"></div><span class="span">{{l_about}}</span></a></li>
+          <li class="navbar-item"><a href="#contact" class="navbar-link hover-underline"><div class="separator"></div><span class="span">{{l_contact}}</span></a></li>
+        </ul>
+        <div class="text-center">
+          <p class="headline-1 navbar-title">{{l_visit}}</p>
+          {{#address}}<address class="body-4">{{address}}</address>{{/address}}
+          {{#hours_line}}<p class="body-4 navbar-text">{{hours_line}}</p>{{/hours_line}}
+          {{#email}}<a href="mailto:{{email}}" class="body-4 sidebar-link">{{email}}</a>{{/email}}
+          {{#phone}}<div class="separator"></div>
+          <a href="tel:{{phone_digits}}" class="body-1 contact-number hover-underline">{{phone}}</a>{{/phone}}
+        </div>
+      </nav>
+      <a href="#contact" class="btn btn-secondary"><span class="text text-1">{{cta}}</span><span class="text text-2" aria-hidden="true">{{cta}}</span></a>
+      <button class="nav-open-btn" aria-label="open menu" data-nav-toggler><span class="line line-1"></span><span class="line line-2"></span><span class="line line-3"></span></button>
+      <div class="overlay" data-nav-toggler data-overlay></div>
+    </div>
+  </header>
+
+
+
+
+
+  <main>
+    <article>
+      <section class="hero text-center" aria-label="home" id="home">
+        <ul class="hero-slider" data-hero-slider>
+          <li class="slider-item active" data-hero-slider-item>
+            <div class="slider-bg"><img src="{{photo:1:./assets/images/hero-slider-1.jpg}}" width="1880" height="950" alt="" class="img-cover"></div>
+            {{#city}}<p class="label-2 section-subtitle slider-reveal">{{city}}</p>{{/city}}
+            <h1 class="display-1 hero-title slider-reveal">{{headline}}</h1>
+            <p class="body-2 hero-text slider-reveal">{{tagline}}</p>
+            <a href="#contact" class="btn btn-primary slider-reveal"><span class="text text-1">{{cta}}</span><span class="text text-2" aria-hidden="true">{{cta}}</span></a>
+          </li>
+        </ul>
+        <button class="slider-btn prev" aria-label="previous" data-prev-btn></button>
+        <button class="slider-btn next" aria-label="next" data-next-btn></button>
+        <a href="#contact" class="hero-btn has-after"><img src="./assets/images/hero-icon.png" width="48" height="48" alt=""><span class="label-2 text-center span">{{l_book}}</span></a>
+      </section>
+
+      <section class="section about text-center" aria-labelledby="about-label" id="about">
+        <div class="container">
+          <div class="about-content">
+            <p class="label-2 section-subtitle" id="about-label">{{l_story}}</p>
+            <h2 class="headline-1 section-title">{{name}}</h2>
+            <p class="section-text">{{about}}</p>
+            {{#services}}<ul class="services-list">{{services_html}}</ul>{{/services}}
+            {{#phone}}<div class="contact-label">{{l_call}}</div>
+            <a href="tel:{{phone_digits}}" class="body-1 contact-number hover-underline">{{phone}}</a>{{/phone}}
+          </div>
+          <figure class="about-banner">
+            <img src="{{photo:2:./assets/images/about-banner.jpg}}" width="570" height="570" loading="lazy" alt="" class="w-100" data-parallax-item data-parallax-speed="1">
+            <div class="abs-img abs-img-1 has-before" data-parallax-item data-parallax-speed="1.75"><img src="{{photo:3:./assets/images/about-abs-image.jpg}}" width="285" height="285" loading="lazy" alt="" class="w-100"></div>
+            <div class="abs-img abs-img-2 has-before"><img src="./assets/images/badge-2.png" width="133" height="134" loading="lazy" alt=""></div>
+          </figure>
+          <img src="./assets/images/shape-3.png" width="197" height="194" loading="lazy" alt="" class="shape">
+        </div>
+      </section>
+
+      <section class="section contact-section text-center" id="contact" aria-labelledby="contact-label">
+        <div class="container">
+          <p class="label-2 section-subtitle" id="contact-label">{{l_contact}}</p>
+          <h2 class="headline-1 section-title">{{l_visit}}</h2>
+          {{#address}}<address class="body-2 contact-line">{{address}}</address>{{/address}}
+          {{#hours}}<ul class="hours-list">{{hours_html}}</ul>{{/hours}}
+          {{#phone}}<a href="tel:{{phone_digits}}" class="body-1 contact-number hover-underline">{{phone}}</a>{{/phone}}
+          {{#email}}<a href="mailto:{{email}}" class="body-2 contact-line">{{email}}</a>{{/email}}
+        </div>
+      </section>
+    </article>
+  </main>
+
+
+
+
+
+  <!-- 
+    - #FOOTER
+  -->
+
+  <footer class="footer section has-bg-image text-center" style="background-image: url('./assets/images/footer-bg.jpg')">
+    <div class="container">
+      <div class="footer-brand has-before has-after">
+        <a href="#home" class="logo"><span class="brand-text">{{name}}</span></a>
+        {{#address}}<address class="body-4">{{address}}</address>{{/address}}
+        {{#email}}<a href="mailto:{{email}}" class="body-4 contact-link">{{email}}</a>{{/email}}
+        {{#phone}}<a href="tel:{{phone_digits}}" class="body-4 contact-link">{{phone}}</a>{{/phone}}
+        {{#hours_line}}<p class="body-4">{{hours_line}}</p>{{/hours_line}}
+      </div>
+      <div class="footer-bottom">
+        <p class="copyright">&copy; {{year}} {{name}} | Template: Grilli by <a href="https://github.com/codewithsadee/grilli" target="_blank" rel="noopener noreferrer" class="link">codewithsadee</a> (MIT)</p>
+      </div>
+    </div>
+  </footer>
+
+
+
+
+
+  <!-- 
+    - #BACK TO TOP
+  -->
+
+  <a href="#top" class="back-top-btn active" aria-label="back to top" data-back-top-btn>
+    <ion-icon name="chevron-up" aria-hidden="true"></ion-icon>
+  </a>
+
+
+
+
+
+  <!-- 
+    - custom js link
+  -->
+  <script src="./assets/js/script.js"></script>
+
+  <!-- 
+    - ionicon link
+  -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+</body>
+
+</html>

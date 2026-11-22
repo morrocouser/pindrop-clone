@@ -6,7 +6,7 @@ import authRoutes from './routes/authRoutes';
 import businessRoutes from './routes/businessRoutes';
 import templateRoutes from './routes/templateRoutes';
 import prospectRoutes from './routes/prospectRoutes';
-import { payRouter, siteRouter } from './routes/publicRoutes';
+import { packRouter, payRouter, siteRouter } from './routes/publicRoutes';
 import sitesRoutes, { earningsRouter } from './routes/sitesRoutes';
 
 const app = express();
@@ -24,6 +24,7 @@ app.use('/api/earnings', earningsRouter);
 app.use('/api/pay', payRouter);
 app.use('/api', prospectRoutes);
 app.use('/s', siteRouter);
+app.use('/t', packRouter);
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

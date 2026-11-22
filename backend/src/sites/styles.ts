@@ -14,8 +14,8 @@ export interface SiteStyle {
   muted: string;
   primary: string;
   accent: string;
-  /** Mise en page spécifique ; "standard" par défaut. */
-  layout?: 'standard' | 'grill';
+  /** Dossier d'un gabarit open source complet dans backend/templates/ (sinon rendu par render.ts). */
+  pack?: string;
   /** Affiche les services en tuiles plutôt qu'en liste. */
   tiles?: boolean;
   /** Mention de licence si le modèle est adapté d'un projet open source. */
@@ -120,15 +120,15 @@ export const SITE_STYLES: SiteStyle[] = [
     accent: '#ff4d2e'
   },
   {
-    // Adapté de « Grilli » (MIT, © 2022 Sadee) : voir THIRD_PARTY_NOTICES.md
-    key: 'grill',
-    name: 'Grill',
+    // Gabarit réel : Grilli, © 2022 Sadee, licence MIT (voir THIRD_PARTY_NOTICES.md)
+    key: 'grilli',
+    name: 'Grilli',
     category: 'Restauration',
-    industry: 'Restaurant gastronomique, bar à cocktails',
-    description: "Noir profond, filets dorés et grand titre : l'ambiance d'une table de soirée. Adapté du modèle open source Grilli.",
+    industry: 'Restaurant, bar, traiteur',
+    description: "Le modèle open source Grilli : fond noir, filets dorés, grande photo d'accueil. Remplacez les photos pour l'adapter au restaurant.",
     hero: 'center',
-    layout: 'grill',
-    credit: 'Adapté de Grilli par Sadee (licence MIT)',
+    pack: 'grilli',
+    credit: 'Grilli par Sadee (licence MIT)',
     fontDisplay: 'Forum',
     fontBody: 'DM Sans',
     bg: '#0c0b09',

@@ -1,4 +1,6 @@
 const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3000/api';
+/** Origine de l'API (sans /api) : sert à charger les images des gabarits. */
+export const API_ORIGIN: string = API_URL.replace(/\/api\/?$/, '');
 const TOKEN_KEY = 'pindrop_token';
 
 export interface User {
@@ -178,8 +180,10 @@ export const api = {
   publishSite: (id: number, mode: 'preview' | 'live') => request<Site>(`/sites/${id}/publish`, send('POST', { mode })),
   unpublishSite: (id: number) => request<Site>(`/sites/${id}/unpublish`, send('POST', {})),
   paymentLink: (id: number, data: { setup_amount: number; monthly_amount: number }) => request<Site>(`/sites/${id}/payment-link`, send('POST', data)),
+  aiStatus: () => request<{ configured: boolean; cost: number }>('/sites/ai/status'),
+  aiEdit: (id: number, instruction: string) => request<{ content: SiteContent; credits_left: number }>(`/sites/${id}/ai`, send('POST', { instruction })),
   renderPreview: (data: { name: string; template_key: string; lang: string; content: SiteContent }) =>
-    request<{ html: string }>('/sites/preview', send('POST', data)),
+    request<{ url: string }>('/sites/preview', send('POST', data)),
   earnings: () => request<Earnings>('/earnings'),
   payInfo: (token: string) => request<PayInfo>(`/pay/${token}`),
   payConfirm: (token: string) => request<{ status: string }>(`/pay/${token}/confirm`, send('POST', {}))

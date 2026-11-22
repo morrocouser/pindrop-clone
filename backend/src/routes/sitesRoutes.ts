@@ -6,12 +6,15 @@ import { config } from '../config';
 import { prisma } from '../database';
 import { idParam } from '../lib/auth';
 import { requireAuth } from '../middleware/auth';
+import { AiError, aiConfigured, rewriteContent } from '../services/ai';
 import { SiteContent, contentSchema } from '../sites/content';
 import { generateContent } from '../sites/generate';
+import { savePreview } from '../sites/previewStore';
 import { renderSite } from '../sites/render';
 import { STYLE_BY_KEY } from '../sites/styles';
 
 export const SITE_CREATION_COST = 100;
+export const AI_EDIT_COST = 10;
 const PREVIEW_DAYS = 7;
 
 const router = express.Router();
@@ -52,6 +55,7 @@ const paymentSchema = z
   .refine((v) => v.setup_amount > 0 || v.monthly_amount > 0, 'Indiquez au moins un montant');
 
 const publishSchema = z.object({ mode: z.enum(['preview', 'live']) });
+const aiSchema = z.object({ instruction: z.string().trim().min(3).max(500) });
 
 const toCents = (n: number): number => Math.round(n * 100);
 
@@ -140,7 +144,9 @@ router.post('/preview', (req: Request, res: Response) => {
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors });
   const style = STYLE_BY_KEY.get(parsed.data.template_key);
   if (!style) return res.status(400).json({ error: 'Unknown template' });
-  return res.json({ html: renderSite({ name: parsed.data.name, lang: parsed.data.lang, content: parsed.data.content, style, noindex: true }) });
+  const html = renderSite({ name: parsed.data.name, lang: parsed.data.lang, content: parsed.data.content, style, noindex: true });
+  const id = savePreview(req.user!.userId, html, !!style.pack);
+  return res.json({ url: `${config.publicBaseUrl}/s/_p/${id}` });
 });
 
 router.post('/', async (req: Request, res: Response) => {
@@ -237,6 +243,47 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
     res.json(siteDto(updated));
   } catch (error) {
     fail(res, 'publish site', error);
+  }
+});
+
+router.get('/ai/status', (_req: Request, res: Response) => {
+  res.json({ configured: aiConfigured(), cost: AI_EDIT_COST });
+});
+
+// Réécriture assistée par IA (via OmniRoute). La proposition n'est pas enregistrée :
+// l'utilisateur la relit, puis l'enregistre. Les crédits ne sont débités qu'en cas de succès.
+router.post('/:id/ai', async (req: Request, res: Response) => {
+  const parsed = aiSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors });
+  try {
+    const site = await findOwned(req, res);
+    if (!site) return;
+    const userId = req.user!.userId;
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { credits: true } });
+    if (!me || me.credits < AI_EDIT_COST) return res.status(402).json({ error: `Crédits insuffisants : une modification par IA coûte ${AI_EDIT_COST} crédits.` });
+
+    const current = contentSchema.safeParse(site.content);
+    if (!current.success) return res.status(500).json({ error: 'Le contenu du site est invalide.' });
+
+    let content: SiteContent;
+    try {
+      content = await rewriteContent({ name: site.name, lang: site.lang, instruction: parsed.data.instruction, current: current.data });
+    } catch (error) {
+      if (error instanceof AiError) return res.status(error.status).json({ error: error.message });
+      throw error;
+    }
+
+    const debit = await prisma.$transaction(async (tx) => {
+      const d = await tx.user.updateMany({ where: { id: userId, credits: { gte: AI_EDIT_COST } }, data: { credits: { decrement: AI_EDIT_COST } } });
+      if (d.count === 0) return false;
+      await tx.creditEntry.create({ data: { user_id: userId, delta: -AI_EDIT_COST, reason: `Modification IA du site « ${site.name.slice(0, 60)} »` } });
+      return true;
+    });
+    if (!debit) return res.status(402).json({ error: 'Crédits insuffisants.' });
+    const after = await prisma.user.findUnique({ where: { id: userId }, select: { credits: true } });
+    return res.json({ content, credits_left: after?.credits ?? 0 });
+  } catch (error) {
+    return fail(res, 'ai edit', error);
   }
 });
 

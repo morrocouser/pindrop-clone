@@ -17,6 +17,12 @@ export const config = {
   // "test" : les paiements sont simulés (aucun débit réel). Un vrai mode Stripe reste à brancher.
   paymentsMode: process.env.PAYMENTS_MODE || 'test',
   platformFeeRate: 0.1,
+  // Passerelle IA OmniRoute (compatible OpenAI) : https://github.com/cheaper-inference/OmniRoute
+  omniroute: {
+    baseUrl: (process.env.OMNIROUTE_URL || 'http://127.0.0.1:20128/v1').replace(/\/$/, ''),
+    apiKey: process.env.OMNIROUTE_API_KEY || '',
+    model: process.env.OMNIROUTE_MODEL || 'auto'
+  },
   corsOrigins: (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim())

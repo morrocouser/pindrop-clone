@@ -2,6 +2,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Copy, ExternalLink, Monitor, Smartphone } from 'lucide-react';
 import { api, errorText, money, Site, SiteContent, Template } from '../api';
+import { useAuth } from '../auth';
 import { StatusBadge } from '../components/StatusBadge';
 
 interface Draft {
@@ -28,6 +29,15 @@ function toDraft(s: Site): Draft {
   const c = s.content;
   return {
     name: s.name, template_key: s.template_key, lang: s.lang,
+    headline: c.headline, tagline: c.tagline, about: c.about, cta: c.cta,
+    services: c.services.join('\n'), hours: c.hours.join('\n'), photos: c.photos.join('\n'),
+    phone: c.phone, email: c.email, address: c.address, primary: c.colors.primary, accent: c.colors.accent
+  };
+}
+
+function withContent(d: Draft, c: SiteContent): Draft {
+  return {
+    ...d,
     headline: c.headline, tagline: c.tagline, about: c.about, cta: c.cta,
     services: c.services.join('\n'), hours: c.hours.join('\n'), photos: c.photos.join('\n'),
     phone: c.phone, email: c.email, address: c.address, primary: c.colors.primary, accent: c.colors.accent
@@ -76,10 +86,19 @@ export default function SiteEditor() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState('');
-  const [html, setHtml] = useState('');
+  const [previewSrc, setPreviewSrc] = useState('');
   const [previewError, setPreviewError] = useState('');
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [amounts, setAmounts] = useState({ setup: '300', monthly: '49' });
+  const { setCredits } = useAuth();
+  const [ai, setAi] = useState<{ configured: boolean; cost: number } | null>(null);
+  const [aiText, setAiText] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    api.aiStatus().then(setAi).catch(() => setAi(null));
+  }, []);
 
   const apply = useCallback((s: Site) => {
     setSite(s);
@@ -106,7 +125,7 @@ export default function SiteEditor() {
         .renderPreview({ name: draft.name || 'Site', template_key: draft.template_key, lang: draft.lang, content: toContent(draft) })
         .then((r) => {
           if (mine !== seq.current) return;
-          setHtml(r.html);
+          setPreviewSrc(`${r.url}?v=${Date.now()}`);
           setPreviewError('');
         })
         .catch((e: unknown) => mine === seq.current && setPreviewError(errorText(e)));
@@ -127,6 +146,23 @@ export default function SiteEditor() {
       setError(errorText(e));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function askAi() {
+    if (aiText.trim().length < 3) return;
+    setAiBusy(true);
+    setAiMsg(null);
+    try {
+      const r = await api.aiEdit(siteId, aiText.trim());
+      setDraft((d) => (d ? withContent(d, r.content) : d));
+      setCredits(r.credits_left);
+      setAiText('');
+      setAiMsg({ ok: true, text: 'Proposition appliquée à l\'aperçu. Relisez-la, puis enregistrez.' });
+    } catch (e) {
+      setAiMsg({ ok: false, text: errorText(e) });
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -250,6 +286,26 @@ export default function SiteEditor() {
         </section>
 
         <section className="panel form">
+          <h2>Demander à l'IA</h2>
+          <p className="muted small">Décrivez ce que vous voulez : « ton plus chaleureux », « ajoute que nous sommes fermés le lundi », « traduis le texte »…</p>
+          <label>
+            Votre demande
+            <textarea rows={3} value={aiText} onChange={(e) => setAiText(e.target.value)} maxLength={500} disabled={aiBusy} />
+          </label>
+          <div className="actions">
+            <button className="btn secondary" onClick={askAi} disabled={aiBusy || aiText.trim().length < 3}>
+              {aiBusy ? "L'IA rédige…" : `Appliquer · ${ai?.cost ?? 10} crédits`}
+            </button>
+            {ai && !ai.configured && <span className="muted small">IA non configurée : voir OMNIROUTE_API_KEY dans backend/.env</span>}
+          </div>
+          {aiMsg && (
+            <p className={aiMsg.ok ? 'muted small' : 'error'} role={aiMsg.ok ? 'status' : 'alert'}>
+              {aiMsg.text}
+            </p>
+          )}
+        </section>
+
+        <section className="panel form">
           <h2>Contenu</h2>
           <p className="notice">Les textes de départ sont génériques : relisez-les et ajoutez les vraies informations (horaires, photos) avant de publier.</p>
           <label>
@@ -356,8 +412,8 @@ export default function SiteEditor() {
         </div>
         {previewError && <p className="error small" role="alert">{previewError}</p>}
         <div className={`frame ${device}`}>
-          {/* sandbox sans autorisation : le contenu du site ne peut exécuter aucun script */}
-          <iframe title="Aperçu du site" sandbox="" srcDoc={html} />
+          {/* Aperçu servi par l'API (autre origine que l'application) : ses scripts n'ont aucun accès à la session */}
+          <iframe title="Aperçu du site" src={previewSrc} />
         </div>
       </div>
     </div>

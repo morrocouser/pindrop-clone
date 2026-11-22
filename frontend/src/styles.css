@@ -646,6 +646,23 @@ legend {
   overflow: hidden;
   border: 1px solid rgb(0 0 0 / 0.08);
 }
+.tpl-thumb.photo {
+  padding: 0;
+  align-content: end;
+  color: #fff;
+}
+.tpl-thumb.photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tpl-thumb.photo .tpl-title {
+  position: relative;
+  padding: 24px 14px 12px;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent);
+}
 .tpl-bar {
   position: absolute;
   inset: 0 0 auto 0;

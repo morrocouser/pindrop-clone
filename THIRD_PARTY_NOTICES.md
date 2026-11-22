@@ -1,11 +1,13 @@
 # Notices de tiers
 
-Ce projet inclut du code adapté de projets open source. Les licences ci-dessous doivent accompagner toute redistribution.
+Ce projet inclut des modèles de sites open source. Leur licence doit accompagner toute redistribution.
 
-## Grilli (modèle « Grill »)
+## Grilli (modèle « Grilli »)
 
 - Source : https://github.com/codewithsadee/grilli
-- Utilisation : la palette, les polices (Forum, DM Sans), les boutons à filet doré et la structure de page du modèle « Grill » (`backend/src/sites/render.ts`) sont adaptés de Grilli. Les scripts, les images et les icônes du dépôt d'origine n'ont pas été repris.
+- Dossier : `backend/templates/grilli/` (fichiers d'origine : feuille de style, script, images, polices référencées ; `index.html` transformé en gabarit à champs `{{...}}` pour recevoir le contenu du site).
+- Modifications : le HTML a été réduit à l'en-tête, l'accueil, « à propos », un bloc contact et le pied de page ; les textes de démonstration ont été remplacés par les informations du commerce. Le crédit « Grilli by codewithsadee (MIT) » reste affiché dans le pied de page de chaque site.
+- Texte de la licence, aussi servi par `/t/grilli/LICENSE` :
 
 MIT License
 
@@ -29,6 +31,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+Les images du dépôt Grilli sont distribuées avec lui sous cette licence ; elles servent de photos par défaut et peuvent être remplacées par celles du commerce dans l'éditeur.
+
 ## Modèles originaux
 
-Les modèles « Barbier », « Immo » et « Torréfacteur » sont des créations originales : ils ne reprennent aucun code tiers.
+Les modèles « Chantier », « Lin », « Braise », « Marée », « Clinique », « Cadre », « Barbier », « Immo » et « Torréfacteur » sont des créations originales : ils ne reprennent aucun code tiers.
