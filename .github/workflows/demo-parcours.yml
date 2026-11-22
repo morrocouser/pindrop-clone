@@ -1,0 +1,31 @@
+name: Essai du commerce à l’aperçu
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parcours:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Démarrer une installation vierge
+        run: docker compose up --build --wait --wait-timeout 180
+      - name: Préparer Chromium
+        run: |
+          npm install --prefix "$RUNNER_TEMP/navigateur" --no-save --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/navigateur/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Essayer le parcours comme vendeur puis comme visiteur
+        run: NODE_PATH="$RUNNER_TEMP/navigateur/node_modules" node demo/parcours.cjs
+      - name: Afficher les services en cas d’échec
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 60 api web db
+      - name: Supprimer uniquement les données jetables de cette exécution
+        if: always()
+        run: docker compose down --volumes --remove-orphans
