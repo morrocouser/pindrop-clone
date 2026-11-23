@@ -20,7 +20,7 @@ const PREVIEW_DAYS = 7;
 const router = express.Router();
 router.use(requireAuth);
 
-const langSchema = z.enum(['fr', 'en']);
+const langSchema = z.enum(['fr', 'en', 'ar']);
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(255),
@@ -50,7 +50,8 @@ const previewSchema = z.object({
 const paymentSchema = z
   .object({
     setup_amount: z.number().min(0).max(100000),
-    monthly_amount: z.number().min(0).max(10000)
+    monthly_amount: z.number().min(0).max(10000),
+    currency: z.enum(['USD', 'EUR', 'MAD']).default('USD')
   })
   .refine((v) => v.setup_amount > 0 || v.monthly_amount > 0, 'Indiquez au moins un montant');
 
@@ -96,6 +97,7 @@ function siteDto(site: SiteWithLinks) {
         token: p.token,
         setup_cents: p.setup_cents,
         monthly_cents: p.monthly_cents,
+        currency: p.currency,
         status: p.status,
         payout_cents: p.payout_cents,
         paid_at: p.paid_at
@@ -144,7 +146,7 @@ router.post('/preview', async (req: Request, res: Response) => {
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten().fieldErrors });
   const style = STYLE_BY_KEY.get(parsed.data.template_key);
   if (!style) return res.status(400).json({ error: 'Unknown template' });
-  const html = renderSite({ name: parsed.data.name, lang: parsed.data.lang, content: parsed.data.content, style, noindex: true });
+  const html = renderSite({ name: parsed.data.name, lang: parsed.data.lang, content: parsed.data.content, style, templateKey: parsed.data.template_key, noindex: true });
   try {
     const id = await savePreview(req.user!.userId, html, !!style.pack);
     return res.json({ url: `${config.publicBaseUrl}/s/_p/${id}` });
@@ -320,7 +322,8 @@ router.post('/:id/payment-link', async (req: Request, res: Response) => {
           site_id: site.id,
           token: crypto.randomBytes(24).toString('hex'),
           setup_cents: toCents(parsed.data.setup_amount),
-          monthly_cents: toCents(parsed.data.monthly_amount)
+          monthly_cents: toCents(parsed.data.monthly_amount),
+          currency: parsed.data.currency
         }
       })
     ]);
@@ -345,13 +348,20 @@ earningsRouter.get('/', async (req: Request, res: Response) => {
     res.json({
       mode: config.paymentsMode,
       commission_rate: config.platformFeeRate,
-      total_paid_out_cents: paid.reduce((s, p) => s + p.payout_cents, 0),
-      monthly_recurring_cents: Math.round(paid.filter((p) => p.site.status === 'live').reduce((s, p) => s + p.monthly_cents, 0) * keep),
+      // Un total par devise : on n'additionne jamais des dirhams et des dollars
+      by_currency: [...new Set(paid.map((p) => p.currency))].map((currency) => ({
+        currency,
+        total_paid_out_cents: paid.filter((p) => p.currency === currency).reduce((s, p) => s + p.payout_cents, 0),
+        monthly_recurring_cents: Math.round(
+          paid.filter((p) => p.currency === currency && p.site.status === 'live').reduce((s, p) => s + p.monthly_cents, 0) * keep
+        )
+      })),
       payments: paid.map((p) => ({
         id: p.id,
         site_id: p.site.id,
         site_name: p.site.name,
         total_cents: p.setup_cents + p.monthly_cents,
+        currency: p.currency,
         fee_cents: p.fee_cents,
         payout_cents: p.payout_cents,
         paid_at: p.paid_at

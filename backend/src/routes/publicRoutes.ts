@@ -91,7 +91,7 @@ siteRouter.get('/:slug', async (req: Request, res: Response) => {
     // Les aperçus restent cachés des moteurs de recherche ; seuls les sites payés sont indexables
     if (site.status === 'preview') res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Cache-Control', 'no-store');
-    return res.send(renderSite({ name: site.name, lang: site.lang, content: content.data, style, noindex: site.status !== 'live' }));
+    return res.send(renderSite({ name: site.name, lang: site.lang, content: content.data, style, templateKey: site.template_key, noindex: site.status !== 'live' }));
   } catch (error) {
     console.error('serve site failed:', error);
     return res.status(500).send(infoPage('Erreur', 'Réessayez dans un instant.'));
@@ -108,6 +108,7 @@ payRouter.get('/:token', async (req: Request, res: Response) => {
       business_name: link.site.name,
       setup_cents: link.setup_cents,
       monthly_cents: link.monthly_cents,
+      currency: link.currency,
       status: link.status,
       mode: config.paymentsMode
     });

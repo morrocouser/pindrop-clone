@@ -117,6 +117,7 @@ model PaymentLink {
   token         String        @unique @db.VarChar(64)
   setup_cents   Int
   monthly_cents Int
+  currency      String        @default("USD") @db.VarChar(3)
   status        PaymentStatus @default(pending)
   fee_cents     Int           @default(0)
   payout_cents  Int           @default(0)

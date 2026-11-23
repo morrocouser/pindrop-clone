@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { api, errorText, Prospect, Template } from '../api';
+import { api, errorText, Lang, LANGS, Prospect, Template } from '../api';
 import { useAuth } from '../auth';
 import { TemplatePreview } from '../components/TemplatePreview';
 
@@ -16,7 +16,7 @@ export default function NewSite() {
   const [name, setName] = useState(prospect?.name ?? '');
   const [address, setAddress] = useState(prospect?.address ?? '');
   const [phone, setPhone] = useState(prospect?.phone ?? '');
-  const [lang, setLang] = useState<'fr' | 'en'>('fr');
+  const [lang, setLang] = useState<Lang>('fr');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -75,9 +75,12 @@ export default function NewSite() {
             </label>
             <label>
               Langue du site
-              <select value={lang} onChange={(e) => setLang(e.target.value as 'fr' | 'en')}>
-                <option value="fr">Français</option>
-                <option value="en">English</option>
+              <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+                {LANGS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>

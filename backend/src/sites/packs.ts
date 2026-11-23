@@ -3,6 +3,7 @@ import path from 'path';
 import { config } from '../config';
 import { esc } from './render-utils';
 import { SiteContent } from './content';
+import { ARABIC_FONT, WA_LABEL, dirOf, jsonLd, ltr, normalizeLang, whatsappHref } from './extras';
 
 /**
  * Modèles « réels » : des gabarits open source complets (HTML, CSS, JS, images) placés dans
@@ -37,6 +38,7 @@ function loadHtml(pack: string): string {
 
 const LABELS = {
   fr: { home: 'Accueil', about: 'À propos', contact: 'Contact', visit: 'Nous rendre visite', book: 'Contact', call: 'Appelez-nous', story: 'Notre histoire' },
+  ar: { home: 'الرئيسية', about: 'من نحن', contact: 'اتصل بنا', visit: 'زورونا', book: 'تواصل', call: 'اتصلوا بنا', story: 'قصتنا' },
   en: { home: 'Home', about: 'About', contact: 'Contact', visit: 'Visit us', book: 'Contact', call: 'Call us', story: 'Our story' }
 };
 
@@ -46,22 +48,39 @@ export interface PackInput {
   lang: string;
   content: SiteContent;
   noindex: boolean;
+  schemaType: string;
 }
 
-export function renderPack({ pack, name, lang, content, noindex }: PackInput): string {
-  const l = lang === 'en' ? LABELS.en : LABELS.fr;
+export function renderPack({ pack, name, lang, content, noindex, schemaType }: PackInput): string {
+  const lg = normalizeLang(lang);
+  const l = LABELS[lg];
+  const wa = whatsappHref(content.whatsapp, lg);
+  // Arabe : les polices du modèle n'ont pas ces caractères, on redéfinit ses variables de police
+  const arHead =
+    lg === 'ar'
+      ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${ARABIC_FONT}:wght@400;700&amp;display=swap"><style>:root{--fontFamily-forum:'${ARABIC_FONT}',sans-serif;--fontFamily-dm_sans:'${ARABIC_FONT}',sans-serif}body{letter-spacing:0}</style>`
+      : '';
   const li = (items: string[]) => items.map((i) => `<li>${esc(i)}</li>`).join('');
   const lastPart = content.address.split(',').pop()?.trim() ?? '';
 
   // Valeurs de texte : échappées au remplacement. Les valeurs *_html sont construites déjà échappées.
   const text: Record<string, string> = {
     name, headline: content.headline, tagline: content.tagline, about: content.about, cta: content.cta || l.contact,
-    phone: content.phone, phone_digits: content.phone.replace(/[^\d+]/g, ''), email: content.email, address: content.address,
+    phone: ltr(content.phone), phone_digits: content.phone.replace(/[^\d+]/g, ''), email: content.email, address: content.address,
     city: lastPart, hours_line: content.hours[0] ?? '', year: String(new Date().getFullYear()),
     l_home: l.home, l_about: l.about, l_contact: l.contact, l_visit: l.visit, l_book: l.book, l_call: l.call, l_story: l.story
   };
-  const raw: Record<string, string> = { services_html: li(content.services), hours_html: li(content.hours) };
-  const present = (k: string): boolean => (k in raw ? raw[k] !== '' : (text[k] ?? '') !== '') || (k === 'services' && content.services.length > 0) || (k === 'hours' && content.hours.length > 0);
+  const raw: Record<string, string> = {
+    services_html: li(content.services),
+    hours_html: li(content.hours),
+    html_lang: lg,
+    html_dir: dirOf(lg),
+    ar_head: arHead,
+    jsonld: jsonLd(schemaType, name, content),
+    wa_href: esc(wa),
+    wa_label: esc(WA_LABEL[lg])
+  };
+  const present = (k: string): boolean => (k === 'whatsapp' ? wa !== '' : k in raw ? raw[k] !== '' : (text[k] ?? '') !== '') || (k === 'services' && content.services.length > 0) || (k === 'hours' && content.hours.length > 0);
 
   let html = loadHtml(pack);
   // {{#champ}}…{{/champ}} : bloc affiché seulement si le champ est renseigné

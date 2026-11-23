@@ -13,6 +13,8 @@ export const contentSchema = z.object({
   email: z.union([z.literal(''), z.string().trim().email().max(255)]),
   address: text(300),
   cta: text(40),
+  // Numéro WhatsApp au format international, chiffres seulement (ex. 212661984321) ; vide = pas de bouton
+  whatsapp: z.string().trim().regex(/^(\d{8,15})?$/, 'Chiffres uniquement, avec l\'indicatif du pays (8 à 15 chiffres)').default(''),
   // Seules les URL https sont acceptées : ces valeurs finissent dans une page publique
   photos: z.array(z.string().url().max(500).refine((u) => u.startsWith('https://'), 'URL https requise')).max(6),
   colors: z.object({ primary: hex, accent: hex })

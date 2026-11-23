@@ -1248,3 +1248,31 @@ legend {
 .credits span {
   margin-left: 4px;
 }
+
+.earn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 48px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  padding: 4px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-ctl);
+  background: var(--card);
+  color: var(--text-2);
+  font: 500 13px/20px var(--font);
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease),
+    color 150ms var(--ease);
+}
+.chip:hover {
+  background: var(--raised);
+  color: var(--text);
+}

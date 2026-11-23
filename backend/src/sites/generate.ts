@@ -7,7 +7,7 @@ export interface GenerateInput {
   address?: string;
   phone?: string;
   email?: string;
-  lang: 'fr' | 'en';
+  lang: 'fr' | 'en' | 'ar';
 }
 
 type Category = 'food' | 'beauty' | 'auto' | 'health' | 'retail' | 'craft' | 'realestate';
@@ -30,7 +30,7 @@ interface Copy {
   cta: string;
 }
 
-const COPY: Record<'fr' | 'en', Record<Category, Copy>> = {
+const COPY: Record<'fr' | 'en' | 'ar', Record<Category, Copy>> = {
   fr: {
     food: {
       headline: (n) => `${n}, à table`,
@@ -132,6 +132,57 @@ const COPY: Record<'fr' | 'en', Record<Category, Copy>> = {
       services: ['Fast response', 'Free quote'],
       cta: 'Get a quote'
     }
+  },
+  ar: {
+    food: {
+      headline: (n) => `${n}، على مائدتكم`,
+      tagline: 'مطبخ منزلي في حيّكم.',
+      about: (n) => `${n} يستقبلكم لتقاسم لحظة طيبة مع أطباق محضّرة بعناية. مرحباً بكم، أو اتصلوا بنا للحجز.`,
+      services: ['في المطعم', 'للأخذ', 'الحجز'],
+      cta: 'احجز طاولة'
+    },
+    beauty: {
+      headline: (n) => `${n}، اعتنوا بأنفسكم`,
+      tagline: 'لحظة لكم، قرب منزلكم.',
+      about: (n) => `في ${n}، كل زيارة مصمَّمة لتمنحكم الراحة والإطلالة التي تحبّونها. احجزوا موعدكم في ثوانٍ.`,
+      services: ['بموعد مسبق', 'نصائح شخصية'],
+      cta: 'احجز موعداً'
+    },
+    auto: {
+      headline: (n) => `${n}، سيارتكم في أيدٍ أمينة`,
+      tagline: 'صيانة وإصلاح مع عرض أسعار واضح.',
+      about: (n) => `${n} يعتني بسيارتكم بجدّية وشفافية. اتصلوا بنا للحصول على عرض أسعار أو موعد.`,
+      services: ['الصيانة', 'الإصلاح', 'عرض أسعار مجاني'],
+      cta: 'اطلب عرض أسعار'
+    },
+    health: {
+      headline: (n) => `${n}، صحتكم قرب منزلكم`,
+      tagline: 'استقبال يصغي إليكم وعناية يُوثق بها.',
+      about: (n) => `${n} يستقبلكم في جوّ مطمئن. تجدون هنا معلومات الاتصال لحجز موعد.`,
+      services: ['بموعد مسبق', 'استقبال يصغي إليكم'],
+      cta: 'احجز موعداً'
+    },
+    retail: {
+      headline: (n) => `${n}، متجركم القريب`,
+      tagline: 'تفضّلوا بزيارة المتجر، نحن في انتظاركم.',
+      about: (n) => `${n} متجر حيّ نأخذ فيه وقتنا لإرشادكم. مرحباً بكم في المتجر.`,
+      services: ['نصائح في المتجر', 'منتجات مختارة'],
+      cta: 'تواصلوا معنا'
+    },
+    realestate: {
+      headline: (n) => `${n}، مشورة يُعتمد عليها`,
+      tagline: 'مواكبة واضحة من الزيارة الأولى إلى التوقيع.',
+      about: (n) => `${n} يواكب مشاريعكم بإصغاء وشفافية. تواصلوا معنا للحديث عنها.`,
+      services: ['مشورة شخصية', 'مواعيد عند الطلب'],
+      cta: 'تواصلوا معنا'
+    },
+    craft: {
+      headline: (n) => `${n}، عمل متقن`,
+      tagline: 'تدخل سريع وعرض أسعار مجاني.',
+      about: (n) => `${n} ينجز أشغالكم بجدّية وفي الوقت المحدد. صِفوا لنا حاجتكم وسنردّ عليكم بسرعة.`,
+      services: ['تدخل سريع', 'عرض أسعار مجاني'],
+      cta: 'اطلب عرض أسعار'
+    }
   }
 };
 
@@ -156,6 +207,7 @@ export function generateContent(input: GenerateInput, style: SiteStyle): SiteCon
     email: input.email ?? '',
     address: input.address ?? '',
     cta: copy.cta,
+    whatsapp: '',
     photos: [],
     colors: { primary: style.primary, accent: style.accent }
   };

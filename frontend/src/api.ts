@@ -3,6 +3,19 @@ const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3000/a
 export const API_ORIGIN: string = API_URL.replace(/\/api\/?$/, '');
 const TOKEN_KEY = 'pindrop_token';
 
+export type Lang = 'fr' | 'en' | 'ar';
+export type Currency = 'USD' | 'EUR' | 'MAD';
+export const CURRENCIES: { value: Currency; label: string }[] = [
+  { value: 'USD', label: 'Dollar ($)' },
+  { value: 'EUR', label: 'Euro (€)' },
+  { value: 'MAD', label: 'Dirham (MAD)' }
+];
+export const LANGS: { value: Lang; label: string }[] = [
+  { value: 'fr', label: 'Français' },
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'العربية (de droite à gauche)' }
+];
+
 export interface User {
   id: number;
   email: string;
@@ -49,6 +62,7 @@ export interface SiteContent {
   email: string;
   address: string;
   cta: string;
+  whatsapp: string;
   photos: string[];
   colors: { primary: string; accent: string };
 }
@@ -58,6 +72,7 @@ export interface PaymentLink {
   token: string;
   setup_cents: number;
   monthly_cents: number;
+  currency: Currency;
   status: 'pending' | 'paid' | 'canceled';
   payout_cents: number;
   paid_at: string | null;
@@ -70,7 +85,7 @@ export interface Site {
   name: string;
   slug: string;
   template_key: string;
-  lang: 'fr' | 'en';
+  lang: Lang;
   content: SiteContent;
   status: SiteStatus;
   preview_expired: boolean;
@@ -85,7 +100,7 @@ export interface Site {
 export interface NewSite {
   name: string;
   template_key: string;
-  lang: 'fr' | 'en';
+  lang: Lang;
   kind?: string;
   address?: string;
   phone?: string;
@@ -95,15 +110,15 @@ export interface NewSite {
 export interface Earnings {
   mode: string;
   commission_rate: number;
-  total_paid_out_cents: number;
-  monthly_recurring_cents: number;
-  payments: { id: number; site_id: number; site_name: string; total_cents: number; fee_cents: number; payout_cents: number; paid_at: string }[];
+  by_currency: { currency: Currency; total_paid_out_cents: number; monthly_recurring_cents: number }[];
+  payments: { id: number; site_id: number; site_name: string; total_cents: number; currency: Currency; fee_cents: number; payout_cents: number; paid_at: string }[];
 }
 
 export interface PayInfo {
   business_name: string;
   setup_cents: number;
   monthly_cents: number;
+  currency: Currency;
   status: 'pending' | 'paid' | 'canceled';
   mode: string;
 }
@@ -179,7 +194,7 @@ export const api = {
   deleteSite: (id: number) => request<void>(`/sites/${id}`, send('DELETE')),
   publishSite: (id: number, mode: 'preview' | 'live') => request<Site>(`/sites/${id}/publish`, send('POST', { mode })),
   unpublishSite: (id: number) => request<Site>(`/sites/${id}/unpublish`, send('POST', {})),
-  paymentLink: (id: number, data: { setup_amount: number; monthly_amount: number }) => request<Site>(`/sites/${id}/payment-link`, send('POST', data)),
+  paymentLink: (id: number, data: { setup_amount: number; monthly_amount: number; currency: Currency }) => request<Site>(`/sites/${id}/payment-link`, send('POST', data)),
   aiStatus: () => request<{ configured: boolean; cost: number }>('/sites/ai/status'),
   aiEdit: (id: number, instruction: string) => request<{ content: SiteContent; credits_left: number }>(`/sites/${id}/ai`, send('POST', { instruction })),
   renderPreview: (data: { name: string; template_key: string; lang: string; content: SiteContent }) =>
@@ -189,6 +204,7 @@ export const api = {
   payConfirm: (token: string) => request<{ status: string }>(`/pay/${token}/confirm`, send('POST', {}))
 };
 
-export const money = (cents: number): string => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol' }).format(cents / 100);
+export const money = (cents: number, currency: Currency = 'USD'): string =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency, currencyDisplay: 'narrowSymbol' }).format(cents / 100);
 
 export const errorText = (e: unknown): string => (e instanceof Error ? e.message : 'Erreur inattendue');

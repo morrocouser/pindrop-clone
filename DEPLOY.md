@@ -34,6 +34,10 @@ Le schéma est appliqué par migration Supabase. La sécurité par ligne (RLS) e
 sans politique pour les rôles publics : seule l'application (rôle `pindrop_app`) y accède, en connexion directe.
 Les migrations Prisma du dossier `backend/prisma/migrations` restent la référence du schéma.
 
+La colonne `payment_links.currency` (devises USD, EUR, MAD) est déjà appliquée sur Supabase ; elle a une valeur
+par défaut, donc l'API déjà en ligne continue de fonctionner. Les nouveautés d'affichage (arabe, WhatsApp, devises)
+n'apparaissent en ligne qu'après un redéploiement des deux sites.
+
 ## Limites connues
 
 - **IA (OmniRoute)** : non disponible en ligne, la passerelle tourne sur la machine locale.

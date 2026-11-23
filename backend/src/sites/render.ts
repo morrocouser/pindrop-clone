@@ -6,11 +6,13 @@ export interface RenderInput {
   lang: string;
   content: SiteContent;
   style: SiteStyle;
+  templateKey: string;
   noindex: boolean;
 }
 
 import { esc } from './render-utils';
 import { renderPack } from './packs';
+import { ARABIC_FONT, actionBar, dirOf, jsonLd, ltr, normalizeLang, schemaTypeFor, whatsappHref } from './extras';
 export { esc };
 
 const safeHex = (v: string, fallback: string): string => (/^#[0-9a-fA-F]{6}$/.test(v) ? v : fallback);
@@ -27,21 +29,31 @@ const fontParam = (f: string): string => `family=${encodeURIComponent(f).replace
 
 const LABELS = {
   fr: { services: 'Ce que nous proposons', about: 'À propos', hours: 'Horaires', contact: 'Nous trouver', call: 'Appeler', mail: 'Écrire', menu: 'La carte', visit: 'Nous rendre visite' },
+  ar: { services: 'ما نقدّمه', about: 'من نحن', hours: 'أوقات العمل', contact: 'تجدوننا', call: 'اتصل', mail: 'راسلنا', menu: 'القائمة', visit: 'زورونا' },
   en: { services: 'What we offer', about: 'About', hours: 'Opening hours', contact: 'Find us', call: 'Call', mail: 'Email', menu: 'Menu', visit: 'Visit us' }
 };
 
+const phoneDigitsOf = (phone: string): string => phone.replace(/[^\d+]/g, '');
+
 export function renderSite(input: RenderInput): string {
   if (input.style.pack) {
-    return renderPack({ pack: input.style.pack, name: input.name, lang: input.lang, content: input.content, noindex: input.noindex });
+    return renderPack({ pack: input.style.pack, name: input.name, lang: input.lang, content: input.content, noindex: input.noindex, schemaType: schemaTypeFor(input.templateKey) });
   }
   const { name, lang, content, style, noindex } = input;
-  const l = lang === 'en' ? LABELS.en : LABELS.fr;
+  const lg = normalizeLang(lang);
+  const l = LABELS[lg];
+  const dir = dirOf(lg);
+  // Arabe : une seule police (Cairo), les polices latines du modèle n'ont pas ces caractères
+  const fontDisplay = lg === 'ar' ? ARABIC_FONT : style.fontDisplay;
+  const fontBody = lg === 'ar' ? ARABIC_FONT : style.fontBody;
+  const wa = whatsappHref(content.whatsapp, lg);
+  const bar = actionBar({ phoneDigits: phoneDigitsOf(content.phone), wa, lang: lg, callLabel: l.call });
   const primary = safeHex(content.colors.primary, style.primary);
   const accent = safeHex(content.colors.accent, style.accent);
-  const phoneDigits = content.phone.replace(/[^\d+]/g, '');
+  const phoneDigits = phoneDigitsOf(content.phone);
   const ctaHref = phoneDigits ? `tel:${phoneDigits}` : content.email ? `mailto:${esc(content.email)}` : '#contact';
 
-  const fonts = [...new Set([style.fontDisplay, style.fontBody])].map(fontParam).join('&amp;');
+  const fonts = [...new Set([fontDisplay, fontBody])].map(fontParam).join('&amp;');
   const photos = content.photos
     .map((u) => `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`)
     .join('');
@@ -52,14 +64,14 @@ export function renderSite(input: RenderInput): string {
 
   const contactLines = [
     content.address && `<p>${esc(content.address)}</p>`,
-    content.phone && `<p><a href="tel:${esc(phoneDigits)}">${esc(content.phone)}</a></p>`,
+    content.phone && `<p><a href="tel:${esc(phoneDigits)}">${esc(ltr(content.phone))}</a></p>`,
     content.email && `<p><a href="mailto:${esc(content.email)}">${esc(content.email)}</a></p>`
   ]
     .filter(Boolean)
     .join('');
 
   return `<!doctype html>
-<html lang="${lang === 'en' ? 'en' : 'fr'}">
+<html lang="${lg}" dir="${dir}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -68,16 +80,17 @@ ${noindex ? '<meta name="robots" content="noindex, nofollow">' : ''}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&amp;display=swap">
+${jsonLd(schemaTypeFor(input.templateKey), name, content)}
 <style>
 :root{--bg:${style.bg};--surface:${style.surface};--ink:${style.ink};--muted:${style.muted};--primary:${primary};--on-primary:${readableOn(primary)};--accent:${accent};--on-accent:${readableOn(accent)}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 '${esc(style.fontBody)}',system-ui,sans-serif}
-h1,h2{font-family:'${esc(style.fontDisplay)}',Georgia,serif;line-height:1.1;margin:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 '${esc(fontBody)}',system-ui,sans-serif}
+h1,h2{font-family:'${esc(fontDisplay)}',Georgia,serif;line-height:1.1;margin:0}
 a{color:inherit}
 .wrap{max-width:960px;margin:0 auto;padding:0 20px}
 header.top{padding:18px 0;border-bottom:1px solid color-mix(in srgb,var(--ink) 14%,transparent)}
 header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px}
-.brand{font-family:'${esc(style.fontDisplay)}',serif;font-weight:800;font-size:1.2rem;text-decoration:none}
+.brand{font-family:'${esc(fontDisplay)}',serif;font-weight:800;font-size:1.2rem;text-decoration:none}
 .btn{display:inline-block;background:var(--accent);color:var(--on-accent);padding:12px 22px;border-radius:999px;font-weight:700;text-decoration:none}
 .hero{padding:72px 0 56px}
 .hero h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;max-width:16ch;text-wrap:balance}
@@ -88,11 +101,11 @@ header.top .wrap{display:flex;justify-content:space-between;align-items:center;g
 .hero.center h1,.hero.center p.tag{margin-left:auto;margin-right:auto}
 .hero.split .wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center}
 .hero.split .art{aspect-ratio:4/3;border-radius:16px;background:var(--primary);color:var(--on-primary);overflow:hidden;display:grid;place-items:center}
-.hero.split .art span{font-family:'${esc(style.fontDisplay)}',serif;font-size:clamp(5rem,14vw,9rem);font-weight:800;line-height:1}
+.hero.split .art span{font-family:'${esc(fontDisplay)}',serif;font-size:clamp(5rem,14vw,9rem);font-weight:800;line-height:1}
 .hero.split .art img{width:100%;height:100%;object-fit:cover;display:block}
 section{padding:40px 0}
 section h2{font-size:1.7rem;margin-bottom:12px}
-ul{padding-left:1.1rem;margin:0}li{margin:6px 0}
+ul{padding-inline-start:1.1rem;margin:0}li{margin:6px 0}
 ul.tiles{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 ul.tiles li{margin:0;padding:16px;background:var(--surface);border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:10px;font-weight:600}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:32px}
@@ -100,6 +113,7 @@ ul.tiles li{margin:0;padding:16px;background:var(--surface);border:1px solid col
 .gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px}
 footer{padding:28px 0;color:var(--muted);font-size:.9rem;border-top:1px solid color-mix(in srgb,var(--ink) 14%,transparent)}
 @media(max-width:700px){.hero{padding:48px 0 36px}.hero.split .wrap{grid-template-columns:1fr}}
+${bar.css}
 </style>
 </head>
 <body>
@@ -122,6 +136,7 @@ ${section(l.contact, contactLines)}
 </div>
 </main>
 <footer><div class="wrap">© ${new Date().getFullYear()} ${esc(name)}</div></footer>
+${bar.html}
 </body>
 </html>`;
 }

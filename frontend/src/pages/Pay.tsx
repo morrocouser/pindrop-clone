@@ -60,18 +60,18 @@ export default function Pay() {
               {info.setup_cents > 0 && (
                 <div>
                   <dt>Création du site</dt>
-                  <dd>{money(info.setup_cents)}</dd>
+                  <dd>{money(info.setup_cents, info.currency)}</dd>
                 </div>
               )}
               {info.monthly_cents > 0 && (
                 <div>
                   <dt>Abonnement mensuel</dt>
-                  <dd>{money(info.monthly_cents)} / mois</dd>
+                  <dd>{money(info.monthly_cents, info.currency)} / mois</dd>
                 </div>
               )}
               <div className="total">
                 <dt>À payer aujourd'hui</dt>
-                <dd>{money(total)}</dd>
+                <dd>{money(total, info.currency)}</dd>
               </div>
             </dl>
             {info.mode === 'test' && <p className="notice">Mode test : le paiement est simulé, aucune carte n'est débitée.</p>}
@@ -81,7 +81,7 @@ export default function Pay() {
               </p>
             )}
             <button className="btn" onClick={pay} disabled={busy}>
-              {busy ? 'Paiement…' : `Payer ${money(total)}`}
+              {busy ? 'Paiement…' : `Payer ${money(total, info.currency)}`}
             </button>
           </>
         )}

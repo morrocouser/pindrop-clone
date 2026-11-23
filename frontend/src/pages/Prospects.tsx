@@ -14,6 +14,18 @@ const KINDS: Record<string, string> = {
 export const kindLabel = (k: string): string => KINDS[k] ?? k.replace(/_/g, ' ');
 
 const RADII = [500, 1000, 2000];
+
+// Raccourcis : centres de grandes villes du Maroc (coordonnées du centre-ville)
+const CITIES: { name: string; at: [number, number] }[] = [
+  { name: 'Rabat', at: [34.0209, -6.8416] },
+  { name: 'Salé', at: [34.0531, -6.7986] },
+  { name: 'Témara', at: [33.9275, -6.9066] },
+  { name: 'Casablanca', at: [33.5731, -7.5898] },
+  { name: 'Marrakech', at: [31.6295, -7.9811] },
+  { name: 'Tanger', at: [35.7595, -5.834] },
+  { name: 'Fès', at: [34.0331, -5.0003] },
+  { name: 'Agadir', at: [30.4278, -9.5981] }
+];
 const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522];
 
 function pinIcon(selected: boolean): L.DivIcon {
@@ -143,6 +155,13 @@ export default function Prospects() {
           </button>
         </form>
         {notice && <p className="muted small">{notice}</p>}
+        <div className="chips" role="group" aria-label="Villes du Maroc">
+          {CITIES.map((c) => (
+            <button key={c.name} type="button" className="chip" onClick={() => flyTo(c.at[0], c.at[1])}>
+              {c.name}
+            </button>
+          ))}
+        </div>
 
         <div className="radius" role="group" aria-label="Rayon de recherche">
           {RADII.map((r) => (
