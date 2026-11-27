@@ -121,6 +121,8 @@ export interface PayInfo {
   currency: Currency;
   status: 'pending' | 'paid' | 'canceled';
   mode: string;
+  /** false : paiement simulé coupé en production (absent sur une ancienne API = payable) */
+  payable?: boolean;
 }
 
 export class ApiError extends Error {

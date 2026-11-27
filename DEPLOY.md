@@ -28,11 +28,23 @@ Ne jamais lancer deux déploiements en même temps (ils partagent le cache `npx`
 `PAYMENTS_MODE=test`, `NODE_ENV=production`.
 Elles sont figées à chaque déploiement : redéployer après tout changement.
 
+Facultatives :
+- `ALLOW_TEST_PAYMENTS=true` : garde le paiement simulé en production. Sans elle, il est coupé, car n'importe qui
+  (le propriétaire du site compris) pourrait confirmer un lien et mettre un site en ligne sans payer.
+  La page de paiement affiche alors « paiement en ligne pas encore ouvert ».
+- `CLIENT_IP_HEADER` : en-tête qui porte l'adresse du client pour la limitation de débit. Inutile sur Netlify
+  (`x-nf-client-connection-ip` est choisi automatiquement) ; `X-Forwarded-For` n'est jamais utilisé, il est falsifiable.
+
 ## Base de données
 
 Le schéma est appliqué par migration Supabase. La sécurité par ligne (RLS) est active sur toutes les tables,
 sans politique pour les rôles publics : seule l'application (rôle `pindrop_app`) y accède, en connexion directe.
 Les migrations Prisma du dossier `backend/prisma/migrations` restent la référence du schéma.
+
+La table `rate_limits` (compteurs de limitation de débit partagés entre les instances de la fonction,
+migration Prisma `20261127120000_rate_limits`) est appliquée sur Supabase (migration `rate_limits`, 27/11/2026),
+comme les autres tables : RLS active, politique `pindrop_app_all` pour `pindrop_app` seul, aucun droit pour
+`anon` ni `authenticated`. Sans cette table, connexion, inscription, paiement et prospection répondraient 500.
 
 La colonne `payment_links.currency` (devises USD, EUR, MAD) est déjà appliquée sur Supabase ; elle a une valeur
 par défaut, donc l'API déjà en ligne continue de fonctionner. Les nouveautés d'affichage (arabe, WhatsApp, devises)

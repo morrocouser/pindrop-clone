@@ -74,15 +74,21 @@ export default function Pay() {
                 <dd>{money(total, info.currency)}</dd>
               </div>
             </dl>
-            {info.mode === 'test' && <p className="notice">Mode test : le paiement est simulé, aucune carte n'est débitée.</p>}
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
+            {info.payable === false ? (
+              <p className="notice">Le paiement en ligne n'est pas encore ouvert. Contactez la personne qui vous a envoyé ce lien.</p>
+            ) : (
+              <>
+                {info.mode === 'test' && <p className="notice">Mode test : le paiement est simulé, aucune carte n'est débitée.</p>}
+                {error && (
+                  <p className="error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <button className="btn" onClick={pay} disabled={busy}>
+                  {busy ? 'Paiement…' : `Payer ${money(total, info.currency)}`}
+                </button>
+              </>
             )}
-            <button className="btn" onClick={pay} disabled={busy}>
-              {busy ? 'Paiement…' : `Payer ${money(total, info.currency)}`}
-            </button>
           </>
         )}
       </div>

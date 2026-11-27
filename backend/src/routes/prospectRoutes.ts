@@ -1,13 +1,13 @@
 import express, { Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { limiter as rateLimiter } from '../lib/rateLimit';
 import { requireAuth } from '../middleware/auth';
 import { findProspects, geocode } from '../services/prospects';
 
 const router = express.Router();
 // Les services OpenStreetMap sont publics et partagés : on limite les appels par IP.
 // L'authentification est posée route par route : ce routeur est monté sur /api tout entier.
-const limiter = rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false });
+const limiter = rateLimiter('osm', 60 * 1000, 30);
 
 const searchSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),

@@ -10,8 +10,8 @@ import { packRouter, payRouter, siteRouter } from './routes/publicRoutes';
 import sitesRoutes, { earningsRouter } from './routes/sitesRoutes';
 
 const app = express();
-// Derrière le CDN de Netlify : l'adresse du client est dans X-Forwarded-For (limitation de débit)
-app.set('trust proxy', 1);
+// Pas de « trust proxy » : X-Forwarded-For est falsifiable. L'adresse du client utilisée pour la
+// limitation de débit vient d'un en-tête posé par l'hébergeur (voir src/lib/rateLimit.ts).
 app.set('etag', false); // pas de réponses 304 : voir netlify/functions/api.cts
 
 app.use(helmet());

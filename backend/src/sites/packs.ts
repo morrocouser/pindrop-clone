@@ -85,9 +85,13 @@ export function renderPack({ pack, name, lang, content, noindex, schemaType }: P
   let html = loadHtml(pack);
   // {{#champ}}…{{/champ}} : bloc affiché seulement si le champ est renseigné
   html = html.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_m, key: string, inner: string) => (present(key) ? inner : ''));
-  // {{photo:N:défaut}} : photo N fournie par l'utilisateur, sinon l'image d'origine du gabarit
-  html = html.replace(/\{\{photo:(\d):([^}]+)\}\}/g, (_m, n: string, fallback: string) => esc(content.photos[Number(n) - 1] ?? fallback));
-  html = html.replace(/\{\{(\w+)\}\}/g, (_m, key: string) => (key in raw ? raw[key] : esc(text[key] ?? '')));
+  // Un seul passage pour {{photo:N:défaut}} et {{champ}} : une valeur déjà insérée n'est jamais relue.
+  // (Avec deux passages, une URL de photo contenant « {{jsonld}} » injectait du HTML brut dans un attribut.)
+  html = html.replace(/\{\{(?:photo:(\d):([^}]+)|(\w+))\}\}/g, (_m, n: string | undefined, fallback: string, key: string) => {
+    // {{photo:N:défaut}} : photo N fournie par l'utilisateur, sinon l'image d'origine du gabarit
+    if (n !== undefined) return esc(content.photos[Number(n) - 1] ?? fallback);
+    return key in raw ? raw[key] : esc(text[key] ?? '');
+  });
   // Les URL relatives du gabarit pointent vers ses fichiers statiques
   const robots = noindex ? '\n<meta name="robots" content="noindex, nofollow">' : '';
   return html.replace('<head>', `<head>\n<base href="${config.publicBaseUrl}/t/${pack}/">${robots}`);
