@@ -10,6 +10,9 @@ import { packRouter, payRouter, siteRouter } from './routes/publicRoutes';
 import sitesRoutes, { earningsRouter } from './routes/sitesRoutes';
 
 const app = express();
+// Pas de « trust proxy » : X-Forwarded-For est falsifiable. L'adresse du client utilisée pour la
+// limitation de débit vient d'un en-tête posé par l'hébergeur (voir src/lib/rateLimit.ts).
+app.set('etag', false); // pas de réponses 304 : voir netlify/functions/api.cts
 
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigins, credentials: true }));

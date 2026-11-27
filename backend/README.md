@@ -191,7 +191,7 @@ Toutes ces routes (sauf les pages publiques) demandent `Authorization: Bearer <t
 | `GET /s/:slug` | Page publique du site (sans script, indexable seulement une fois payé) |
 | `GET /api/pay/:token`, `POST /api/pay/:token/confirm` | Page de paiement du commerçant |
 
-**Paiements** : `PAYMENTS_MODE=test` (par défaut) simule le paiement, sans aucun débit réel. La commission de 10 % est calculée comme sur Pindrop. Le vrai paiement par carte (Stripe) reste à brancher. **Prospection** : les serveurs publics OpenStreetMap peuvent répondre lentement (jusqu'à une minute) ; « sans site » signifie « sans site renseigné dans OpenStreetMap ».
+**Paiements** : `PAYMENTS_MODE=test` (par défaut) simule le paiement, sans aucun débit réel. Comme n'importe qui peut alors confirmer un lien (et mettre un site en ligne gratuitement), ce paiement simulé est coupé quand `NODE_ENV=production`, sauf si `ALLOW_TEST_PAYMENTS=true`. La commission de 10 % est calculée comme sur Pindrop. Le vrai paiement par carte (Stripe) reste à brancher. **Prospection** : les serveurs publics OpenStreetMap peuvent répondre lentement (jusqu'à une minute) ; « sans site » signifie « sans site renseigné dans OpenStreetMap ».
 
 ## Database Schema
 
@@ -264,6 +264,11 @@ Run tests with:
 ```bash
 npm test
 ```
+
+Les tests (`tests/`, Jest + Supertest) démarrent seuls un Postgres jetable (embedded-postgres, UTF-8),
+y appliquent les migrations, puis le suppriment : la base de développement du `.env` n'est jamais touchée.
+Pour utiliser un Postgres déjà lancé (CI), définir `TEST_DATABASE_URL` : sa base doit être dédiée aux tests.
+Un Postgres local créé à la main doit être en UTF-8 (`ENCODING 'UTF8'`), sinon l'aperçu des pages échoue.
 
 ### Environment Variables
 

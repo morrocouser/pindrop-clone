@@ -1,14 +1,15 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Copy, ExternalLink, Monitor, Smartphone } from 'lucide-react';
-import { api, errorText, money, Site, SiteContent, Template } from '../api';
+import { api, CURRENCIES, Currency, errorText, Lang, LANGS, money, Site, SiteContent, Template } from '../api';
 import { useAuth } from '../auth';
 import { StatusBadge } from '../components/StatusBadge';
 
 interface Draft {
   name: string;
   template_key: string;
-  lang: 'fr' | 'en';
+  lang: Lang;
+  whatsapp: string;
   headline: string;
   tagline: string;
   about: string;
@@ -28,7 +29,7 @@ const lines = (s: string): string[] => s.split('\n').map((l) => l.trim()).filter
 function toDraft(s: Site): Draft {
   const c = s.content;
   return {
-    name: s.name, template_key: s.template_key, lang: s.lang,
+    name: s.name, template_key: s.template_key, lang: s.lang, whatsapp: c.whatsapp ?? '',
     headline: c.headline, tagline: c.tagline, about: c.about, cta: c.cta,
     services: c.services.join('\n'), hours: c.hours.join('\n'), photos: c.photos.join('\n'),
     phone: c.phone, email: c.email, address: c.address, primary: c.colors.primary, accent: c.colors.accent
@@ -38,6 +39,7 @@ function toDraft(s: Site): Draft {
 function withContent(d: Draft, c: SiteContent): Draft {
   return {
     ...d,
+    whatsapp: c.whatsapp ?? '',
     headline: c.headline, tagline: c.tagline, about: c.about, cta: c.cta,
     services: c.services.join('\n'), hours: c.hours.join('\n'), photos: c.photos.join('\n'),
     phone: c.phone, email: c.email, address: c.address, primary: c.colors.primary, accent: c.colors.accent
@@ -48,7 +50,7 @@ function toContent(d: Draft): SiteContent {
   return {
     headline: d.headline.trim(), tagline: d.tagline.trim(), about: d.about.trim(), cta: d.cta.trim(),
     services: lines(d.services), hours: lines(d.hours), photos: lines(d.photos),
-    phone: d.phone.trim(), email: d.email.trim(), address: d.address.trim(),
+    phone: d.phone.trim(), email: d.email.trim(), address: d.address.trim(), whatsapp: d.whatsapp.replace(/\D/g, ''),
     colors: { primary: d.primary, accent: d.accent }
   };
 }
@@ -90,6 +92,7 @@ export default function SiteEditor() {
   const [previewError, setPreviewError] = useState('');
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [amounts, setAmounts] = useState({ setup: '300', monthly: '49' });
+  const [currency, setCurrency] = useState<Currency>('USD');
   const { setCredits } = useAuth();
   const [ai, setAi] = useState<{ configured: boolean; cost: number } | null>(null);
   const [aiText, setAiText] = useState('');
@@ -197,6 +200,7 @@ export default function SiteEditor() {
   const setupCents = Math.round(Number(amounts.setup || 0) * 100);
   const monthlyCents = Math.round(Number(amounts.monthly || 0) * 100);
   const firstCharge = setupCents + monthlyCents;
+  const cur: Currency = link?.currency ?? currency;
   const previewLive = site.status === 'preview' && !site.preview_expired;
 
   return (
@@ -220,7 +224,7 @@ export default function SiteEditor() {
           {dirty && <p className="notice">Enregistrez vos modifications avant de publier : la publication utilise la version enregistrée.</p>}
 
           {paid ? (
-            <p>Payé : {money(paid.setup_cents + paid.monthly_cents)}, dont {money(paid.payout_cents)} pour vous. Le site est en ligne.</p>
+            <p>Payé : {money(paid.setup_cents + paid.monthly_cents, paid.currency)}, dont {money(paid.payout_cents, paid.currency)} pour vous. Le site est en ligne.</p>
           ) : (
             <>
               <p className="muted">Montrez le site au commerçant avant de lui demander quoi que ce soit.</p>
@@ -251,25 +255,35 @@ export default function SiteEditor() {
           {!paid && (
             <>
               <h3>Faire payer le commerçant</h3>
+              <label>
+                Devise
+                <select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
+                  {CURRENCIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="row">
                 <label>
-                  Création ($)
+                  Création ({currency})
                   <input type="number" min="0" step="1" value={amounts.setup} onChange={(e) => setAmounts({ ...amounts, setup: e.target.value })} />
                 </label>
                 <label>
-                  Par mois ($)
+                  Par mois ({currency})
                   <input type="number" min="0" step="1" value={amounts.monthly} onChange={(e) => setAmounts({ ...amounts, monthly: e.target.value })} />
                 </label>
               </div>
               <p className="muted small">
                 {firstCharge > 0
-                  ? `Premier paiement : ${money(firstCharge)}. Vous gardez 90 % : ${money(Math.round(firstCharge * 0.9))}.`
+                  ? `Premier paiement : ${money(firstCharge, currency)}. Vous gardez 90 % : ${money(Math.round(firstCharge * 0.9), currency)}.`
                   : 'Indiquez au moins un montant.'}
               </p>
               <button
                 className="btn secondary"
                 disabled={firstCharge <= 0 || !!busy}
-                onClick={() => run('link', () => api.paymentLink(siteId, { setup_amount: setupCents / 100, monthly_amount: monthlyCents / 100 }))}
+                onClick={() => run('link', () => api.paymentLink(siteId, { setup_amount: setupCents / 100, monthly_amount: monthlyCents / 100, currency }))}
               >
                 {busy === 'link' ? 'Création…' : link ? 'Remplacer le lien de paiement' : 'Créer le lien de paiement'}
               </button>
@@ -277,7 +291,7 @@ export default function SiteEditor() {
                 <>
                   <CopyField value={`${window.location.origin}/pay/${link.token}`} />
                   <p className="muted small">
-                    Le site passe en ligne dès que le commerçant a payé ({money(link.setup_cents)} + {money(link.monthly_cents)} / mois).
+                    Le site passe en ligne dès que le commerçant a payé ({money(link.setup_cents, cur)} + {money(link.monthly_cents, cur)} / mois).
                   </p>
                 </>
               )}
@@ -355,6 +369,10 @@ export default function SiteEditor() {
             </label>
           </div>
           <label>
+            WhatsApp (avec l'indicatif du pays, chiffres seulement, ex. 212661984321)
+            <input inputMode="numeric" value={draft.whatsapp} onChange={set('whatsapp')} maxLength={15} placeholder="212661984321" />
+          </label>
+          <label>
             Adresse
             <input value={draft.address} onChange={set('address')} maxLength={300} />
           </label>
@@ -376,8 +394,11 @@ export default function SiteEditor() {
             <label>
               Langue
               <select value={draft.lang} onChange={set('lang')}>
-                <option value="fr">Français</option>
-                <option value="en">English</option>
+                {LANGS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>

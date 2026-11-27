@@ -30,13 +30,13 @@ function Shell({ children }: { children: ReactNode }) {
         <Brand />
         <nav className="appnav" aria-label="Navigation principale">
           <NavLink to="/" end>
-            <MapPin size={17} aria-hidden /> <span>Prospection</span>
+            <MapPin size={18} aria-hidden /> <span>Prospection</span>
           </NavLink>
           <NavLink to="/sites">
-            <PanelsTopLeft size={17} aria-hidden /> <span>Mes sites</span>
+            <PanelsTopLeft size={18} aria-hidden /> <span>Mes sites</span>
           </NavLink>
           <NavLink to="/templates">
-            <LayoutTemplate size={17} aria-hidden /> <span>Modèles</span>
+            <LayoutTemplate size={18} aria-hidden /> <span>Modèles</span>
           </NavLink>
         </nav>
         <div className="nav-right">

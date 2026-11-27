@@ -25,14 +25,18 @@ export default function Sites() {
 
       {earnings && (
         <dl className="earn">
-          <div>
-            <dt>Déjà reçu (90 %)</dt>
-            <dd>{money(earnings.total_paid_out_cents)}</dd>
-          </div>
-          <div>
-            <dt>Revenu mensuel récurrent</dt>
-            <dd>{money(earnings.monthly_recurring_cents)}</dd>
-          </div>
+          {(earnings.by_currency.length ? earnings.by_currency : [{ currency: 'USD' as const, total_paid_out_cents: 0, monthly_recurring_cents: 0 }]).map((c) => (
+            <div key={c.currency} className="earn-group">
+              <div>
+                <dt>Déjà reçu (90 %), {c.currency}</dt>
+                <dd>{money(c.total_paid_out_cents, c.currency)}</dd>
+              </div>
+              <div>
+                <dt>Revenu mensuel récurrent, {c.currency}</dt>
+                <dd>{money(c.monthly_recurring_cents, c.currency)}</dd>
+              </div>
+            </div>
+          ))}
           {earnings.mode === 'test' && <p className="muted small test-note">Mode test : les paiements sont simulés, aucun argent réel n'est échangé.</p>}
         </dl>
       )}
@@ -60,7 +64,7 @@ export default function Sites() {
                 </Link>
                 <span className="muted small">
                   Modifié le {new Date(s.updated_at ?? s.published_at ?? Date.now()).toLocaleDateString('fr-FR')}
-                  {paid ? ` · ${money(paid.setup_cents + paid.monthly_cents)} encaissés` : ''}
+                  {paid ? ` · ${money(paid.setup_cents + paid.monthly_cents, paid.currency)} encaissés` : ''}
                 </span>
               </div>
               <StatusBadge site={s} />

@@ -14,12 +14,24 @@ const KINDS: Record<string, string> = {
 export const kindLabel = (k: string): string => KINDS[k] ?? k.replace(/_/g, ' ');
 
 const RADII = [500, 1000, 2000];
+
+// Raccourcis : centres de grandes villes du Maroc (coordonnées du centre-ville)
+const CITIES: { name: string; at: [number, number] }[] = [
+  { name: 'Rabat', at: [34.0209, -6.8416] },
+  { name: 'Salé', at: [34.0531, -6.7986] },
+  { name: 'Témara', at: [33.9275, -6.9066] },
+  { name: 'Casablanca', at: [33.5731, -7.5898] },
+  { name: 'Marrakech', at: [31.6295, -7.9811] },
+  { name: 'Tanger', at: [35.7595, -5.834] },
+  { name: 'Fès', at: [34.0331, -5.0003] },
+  { name: 'Agadir', at: [30.4278, -9.5981] }
+];
 const DEFAULT_CENTER: [number, number] = [48.8566, 2.3522];
 
 function pinIcon(selected: boolean): L.DivIcon {
   return L.divIcon({
     className: 'pin-icon',
-    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#0a2540' : '#2345bb'}" stroke="#fff" stroke-width="1.6"/><circle cx="16" cy="11" r="3.5" fill="#fff"/></svg>`,
+    html: `<svg width="${selected ? 38 : 30}" height="${selected ? 38 : 30}" viewBox="0 0 32 32"><path d="M16 2a9 9 0 0 0-9 9c0 7 9 19 9 19s9-12 9-19a9 9 0 0 0-9-9z" fill="${selected ? '#111827' : '#2345bb'}" stroke="#fff" stroke-width="1.6"/><circle cx="16" cy="11" r="3.5" fill="#fff"/></svg>`,
     iconSize: [selected ? 38 : 30, selected ? 38 : 30],
     iconAnchor: [selected ? 19 : 15, selected ? 38 : 30]
   });
@@ -143,6 +155,13 @@ export default function Prospects() {
           </button>
         </form>
         {notice && <p className="muted small">{notice}</p>}
+        <div className="chips" role="group" aria-label="Villes du Maroc">
+          {CITIES.map((c) => (
+            <button key={c.name} type="button" className="chip" onClick={() => flyTo(c.at[0], c.at[1])}>
+              {c.name}
+            </button>
+          ))}
+        </div>
 
         <div className="radius" role="group" aria-label="Rayon de recherche">
           {RADII.map((r) => (

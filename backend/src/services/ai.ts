@@ -13,7 +13,7 @@ export const aiConfigured = (): boolean => config.omniroute.apiKey.length > 0;
 const SYSTEM = `Tu rédiges le contenu du site web d'un petit commerce local.
 Tu reçois un objet JSON "site" (le contenu actuel) et une "instruction" de l'utilisateur.
 Réponds UNIQUEMENT avec l'objet JSON du site modifié, sans texte autour, avec exactement les mêmes clés :
-headline, tagline, about, services (liste), hours (liste), phone, email, address, cta, photos (liste), colors {primary, accent}.
+headline, tagline, about, services (liste), hours (liste), phone, email, address, cta, whatsapp, photos (liste), colors {primary, accent}.
 Règles :
 - Applique l'instruction ; ne modifie pas ce qu'elle ne demande pas.
 - N'invente jamais de téléphone, d'e-mail, d'adresse, d'horaires, de prix ni de récompenses : garde les valeurs actuelles, sauf si l'instruction les fournit.
@@ -56,7 +56,7 @@ export async function rewriteContent(input: { name: string; lang: string; instru
           { role: 'system', content: SYSTEM },
           {
             role: 'user',
-            content: JSON.stringify({ commerce: input.name, langue: input.lang === 'en' ? 'anglais' : 'français', instruction: input.instruction, site: input.current })
+            content: JSON.stringify({ commerce: input.name, langue: input.lang === 'en' ? 'anglais' : input.lang === 'ar' ? 'arabe' : 'français', instruction: input.instruction, site: input.current })
           }
         ]
       }),

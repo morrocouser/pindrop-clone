@@ -1,22 +1,23 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import express, { Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { config } from '../config';
 import { prisma } from '../database';
 import { signToken } from '../lib/auth';
+import { limiter } from '../lib/rateLimit';
 import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
 
-// Limite les tentatives de connexion / inscription (anti brute-force)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// Limite les tentatives de connexion / inscription (anti brute-force), toutes instances confondues
+const authLimiter = limiter('auth', 15 * 60 * 1000, 20);
+
+// Empreinte factice comparée quand le compte n'existe pas : la réponse prend le même temps
+// qu'avec un compte existant, ce qui empêche de deviner les adresses inscrites au chronomètre.
+let dummyHash: Promise<string> | null = null;
+const getDummyHash = (): Promise<string> => (dummyHash ??= bcrypt.hash(crypto.randomBytes(16).toString('hex'), config.bcryptRounds));
 
 const registerSchema = z.object({
   email: z.string().email().max(255).transform((e) => e.toLowerCase()),
@@ -71,7 +72,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    const valid = user ? await bcrypt.compare(password, user.password_hash) : false;
+    const valid = await bcrypt.compare(password, user ? user.password_hash : await getDummyHash());
     if (!user || !valid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }

@@ -1,8 +1,8 @@
 import path from 'path';
 import express, { Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config';
 import { prisma } from '../database';
+import { limiter } from '../lib/rateLimit';
 import { contentSchema } from '../sites/content';
 import { esc, renderSite } from '../sites/render';
 import { PACKS_DIR } from '../sites/packs';
@@ -22,7 +22,9 @@ const SITE_CSP = [
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'",
-  'sandbox'
+  // Aucun script (pas d'allow-scripts). allow-popups(-to-escape-sandbox) : sans eux, les liens
+  // target="_blank" (bouton WhatsApp) sont bloqués sans message ; l'onglet ouvert n'hérite pas de la sandbox.
+  'sandbox allow-popups allow-popups-to-escape-sandbox'
 ].join('; ');
 
 // Gabarits open source complets : ils ont leurs propres scripts (menu, animations) et chargent
@@ -39,7 +41,10 @@ const PACK_CSP = [
   "connect-src https://unpkg.com https://cdn.jsdelivr.net",
   `base-uri ${SELF}`,
   "form-action 'none'",
-  "frame-ancestors 'none'"
+  "frame-ancestors 'none'",
+  // Scripts permis, mais sans allow-same-origin : la page n'a jamais les droits de l'origine de l'API.
+  // allow-popups(-to-escape-sandbox) : les liens target="_blank" (WhatsApp, crédits) restent utilisables.
+  'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox'
 ].join('; ');
 
 const STATIC_EXT = new Set(['.css', '.js', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot']);
@@ -61,8 +66,8 @@ function infoPage(title: string, message: string): string {
 }
 
 // Aperçu d'un brouillon (voir previewStore) : URL non devinable, expire au bout de 10 minutes
-siteRouter.get('/_p/:id', (req: Request, res: Response) => {
-  const p = getPreview(req.params.id);
+siteRouter.get('/_p/:id', async (req: Request, res: Response) => {
+  const p = await getPreview(req.params.id).catch(() => null);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -91,14 +96,14 @@ siteRouter.get('/:slug', async (req: Request, res: Response) => {
     // Les aperçus restent cachés des moteurs de recherche ; seuls les sites payés sont indexables
     if (site.status === 'preview') res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Cache-Control', 'no-store');
-    return res.send(renderSite({ name: site.name, lang: site.lang, content: content.data, style, noindex: site.status !== 'live' }));
+    return res.send(renderSite({ name: site.name, lang: site.lang, content: content.data, style, templateKey: site.template_key, noindex: site.status !== 'live' }));
   } catch (error) {
     console.error('serve site failed:', error);
     return res.status(500).send(infoPage('Erreur', 'Réessayez dans un instant.'));
   }
 });
 
-payRouter.use(rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }));
+payRouter.use(limiter('pay', 60 * 1000, 30));
 
 payRouter.get('/:token', async (req: Request, res: Response) => {
   try {
@@ -108,8 +113,11 @@ payRouter.get('/:token', async (req: Request, res: Response) => {
       business_name: link.site.name,
       setup_cents: link.setup_cents,
       monthly_cents: link.monthly_cents,
+      currency: link.currency,
       status: link.status,
-      mode: config.paymentsMode
+      mode: config.paymentsMode,
+      // false : le bouton de paiement simulé est coupé (production sans ALLOW_TEST_PAYMENTS)
+      payable: config.paymentsMode !== 'test' || config.allowTestPayments
     });
   } catch (error) {
     console.error('pay details failed:', error);
@@ -120,6 +128,9 @@ payRouter.get('/:token', async (req: Request, res: Response) => {
 // Mode test : simule le paiement. Un vrai débit nécessite l'intégration Stripe, non branchée ici.
 payRouter.post('/:token/confirm', async (req: Request, res: Response) => {
   if (config.paymentsMode !== 'test') return res.status(501).json({ error: "Le paiement par carte n'est pas encore configuré." });
+  if (!config.allowTestPayments) {
+    return res.status(503).json({ error: "Le paiement en ligne n'est pas encore ouvert. Contactez la personne qui vous a envoyé ce lien." });
+  }
   try {
     const link = await prisma.paymentLink.findUnique({ where: { token: req.params.token } });
     if (!link) return res.status(404).json({ error: 'Lien de paiement introuvable' });

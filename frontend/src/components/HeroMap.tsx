@@ -36,7 +36,11 @@ export function HeroMap() {
         .bindTooltip(`${s.name}<small>${s.kind}</small>`, { permanent: true, direction: 'top', offset: [0, -8], className: 'hero-tip' })
         .addTo(map);
     });
+    // La carte se dimensionne avec sa grille : on recalcule si la taille change après le premier rendu
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(el.current);
     return () => {
+      ro.disconnect();
       map.remove();
     };
   }, []);

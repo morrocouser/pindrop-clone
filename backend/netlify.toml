@@ -1,0 +1,17 @@
+# API Pindrop : fonction Express (Netlify Functions) + fichiers statiques des gabarits.
+# Variables d'environnement à définir sur le site : DATABASE_URL (secret), JWT_SECRET (secret),
+# CORS_ORIGIN, PUBLIC_BASE_URL, PAYMENTS_MODE, NODE_ENV.
+[build]
+  command = "npx prisma generate && node scripts/prepare-netlify.cjs"
+  publish = "publish"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client"]
+  included_files = [
+    "templates/*/index.html",
+    "prisma/schema.prisma",
+    "node_modules/.prisma/client/**",
+    "node_modules/@prisma/client/**"
+  ]

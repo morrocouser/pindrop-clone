@@ -15,13 +15,13 @@ export interface GeoResult {
   lon: number;
 }
 
-// Les serveurs Overpass publics sont partagés : ils répondent parfois 502 ou lentement, d'où les reprises
+// Les serveurs Overpass publics sont partagés : ils répondent parfois 502 ou lentement
 const OVERPASS_URLS = [
+  'https://overpass.openstreetmap.fr/api/interpreter', // couverture mondiale, le plus rapide au dernier test
   'https://overpass-api.de/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter'
 ];
-const ATTEMPTS = 4;
 const UA = 'pindrop-clone-dev/1.0';
 const CACHE_MS = 10 * 60 * 1000;
 const cache = new Map<string, { at: number; data: Prospect[] }>();
@@ -33,7 +33,7 @@ function buildQuery(lat: number, lon: number, radius: number): string {
   const dLat = radius / 111320;
   const dLon = radius / (111320 * Math.cos((lat * Math.PI) / 180));
   const a = `(${(lat - dLat).toFixed(5)},${(lon - dLon).toFixed(5)},${(lat + dLat).toFixed(5)},${(lon + dLon).toFixed(5)})`;
-  return `[out:json][timeout:40];(
+  return `[out:json][timeout:25];(
 nwr["name"]["shop"]${NO_SITE}${a};
 nwr["name"]["amenity"~"^(restaurant|cafe|fast_food|bar|pub|hairdresser|dentist|clinic|doctors|pharmacy|car_wash)$"]${NO_SITE}${a};
 nwr["name"]["craft"]${NO_SITE}${a};
@@ -68,31 +68,46 @@ function toProspect(el: OverpassElement): Prospect | null {
   };
 }
 
+/** Interroge un miroir Overpass ; échoue après `timeoutMs`. */
+async function queryOverpass(url: string, body: string, timeoutMs: number): Promise<Prospect[]> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, Accept: 'application/json' },
+    body,
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+  if (!res.ok) throw new Error(`Overpass ${res.status}`);
+  const json = (await res.json()) as { elements?: OverpassElement[] };
+  return (json.elements ?? []).map(toProspect).filter((p): p is Prospect => p !== null);
+}
+
+/** Premier résultat réussi parmi plusieurs promesses (Promise.any n'existe pas dans la cible ES2020). */
+function firstSuccess<T>(promises: Promise<T>[]): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let failed = 0;
+    let last: unknown;
+    for (const p of promises) {
+      p.then(resolve, (e) => {
+        last = e;
+        if (++failed === promises.length) reject(last);
+      });
+    }
+  });
+}
+
+// L'hébergeur coupe toute requête sans réponse au bout de 30 s : on reste en dessous.
+const DEADLINE_MS = 26000;
+
 export async function findProspects(lat: number, lon: number, radius: number): Promise<Prospect[]> {
   const key = `${lat.toFixed(3)}:${lon.toFixed(3)}:${radius}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
 
-  let lastError: unknown;
-  for (let i = 0; i < ATTEMPTS; i++) {
-    const url = OVERPASS_URLS[i % OVERPASS_URLS.length];
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA, Accept: 'application/json' },
-        body: `data=${encodeURIComponent(buildQuery(lat, lon, radius))}`,
-        signal: AbortSignal.timeout(50000)
-      });
-      if (!res.ok) throw new Error(`Overpass ${res.status}`);
-      const json = (await res.json()) as { elements?: OverpassElement[] };
-      const data = (json.elements ?? []).map(toProspect).filter((p): p is Prospect => p !== null);
-      cache.set(key, { at: Date.now(), data });
-      return data;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Overpass indisponible');
+  // Les serveurs Overpass publics sont partagés et lents : on les interroge tous en même temps
+  const body = `data=${encodeURIComponent(buildQuery(lat, lon, radius))}`;
+  const data = await firstSuccess(OVERPASS_URLS.map((url) => queryOverpass(url, body, DEADLINE_MS)));
+  cache.set(key, { at: Date.now(), data });
+  return data;
 }
 
 export async function geocode(q: string): Promise<GeoResult[]> {
